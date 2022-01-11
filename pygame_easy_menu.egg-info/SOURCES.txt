@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+setup.py
+pygame_easy_menu/__init__.py
+pygame_easy_menu/pygame_easy_menu.py
+pygame_easy_menu/tools.py
+pygame_easy_menu.egg-info/PKG-INFO
+pygame_easy_menu.egg-info/SOURCES.txt
+pygame_easy_menu.egg-info/dependency_links.txt
+pygame_easy_menu.egg-info/top_level.txt
