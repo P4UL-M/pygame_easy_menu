@@ -26,13 +26,18 @@ class Menu_Manager(object):
     """
     class principale de pygame qui gère la fenetre
     """
-    def __init__(self,window=None,pygame=None,name=None,size:Vector2=None,background=None) -> None:
+    def __init__(self,window=None,pygame=None,name=None,size:Vector2=None,background=None,icon=None) -> None:
         """
         initialisation de pygame et de la fenêtre et des variables globales
         """
         if not window and not pygame:
             raise RuntimeError("You must pass either your window either pygame to add a menu manager")
         self.screen:py.Surface = pygame.display.set_mode(size(),0,32) if not window else window
+
+        if name and pygame:
+            pygame.display.set_caption(name)
+        if icon and pygame:
+            pygame.display.set_icon(icon)
 
         self.actual_menu:Menu = None
         self.menus:list[Menu] = []
