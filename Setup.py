@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 setuptools.setup( 
     name="pygame_easy_menu", 
 
-    version="0.0.6", 
+    version="0.0.9", 
   
     
     author="Paul Mairesse",
@@ -24,4 +24,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License", 
         "Operating System :: OS Independent", 
     ], 
+    include_package_data=True,
 ) 

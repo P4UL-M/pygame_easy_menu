@@ -51,3 +51,4 @@ game = Menu_Manager(window=win, background="my_image.png") # win is your pygame 
 
 ajouter image/icon par défaut dans le module pour exemple code
 finir read me
+replace print by logging
