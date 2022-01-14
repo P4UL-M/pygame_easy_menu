@@ -1,0 +1,5 @@
+pyproject.toml
+dist/*
+pygame_easy_menu.egg-info/*
+pygame_Menu.egg-info/*
+*.pyc
