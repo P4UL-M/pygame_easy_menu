@@ -19,7 +19,7 @@ python -m pip install pygame_easy_menu
 
 ### link your window or make one
 
-create one : 
+create a new window : 
 ```python
 from pygame_easy_menu import *
 import pygame
@@ -29,7 +29,7 @@ pygame.init()
 game = Menu_Manager(pygame=pygame, name="MySuperGame", size=Vector2(1000,800), background="my_image.png")
 ```
 
-link to an existing one :
+link the library to an already existing window :
 ```python
 from pygame_easy_menu import *
 
