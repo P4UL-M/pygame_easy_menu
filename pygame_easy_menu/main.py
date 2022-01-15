@@ -4,6 +4,10 @@ from pygame.locals import *     # PYGAME constant & functions
 from sys import exit            # exit script
 import textwrap3                 # wrap text automatically
 
+import logging
+
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
+
 _window = None
 FONT = None
 
@@ -48,7 +52,8 @@ class Menu_Manager(object):
                 self.background = py.image.load(background).convert() # tuile pour le background
                 self.background = py.transform.scale(self.background, (size.x, size.y))
             except FileNotFoundError:
-                print("Your principal background doesn't seems to exist")
+                logging.error("File not found : the background of your menu was not found")
+                raise FileNotFoundError
         else:
             self.background = py.Surface(size())
         
@@ -102,7 +107,8 @@ class sprite:
         try:
             self.surface:py.Surface = py.image.load(self.file).convert_alpha()
         except FileNotFoundError:
-            print("Your image doesn't seems to exist")
+            logging.error(f"File not found : your image for your sprite {self.name} was not found")
+            raise FileNotFoundError
 
         self.scale = Vector2(self.surface.get_width(),self.surface.get_height())
     
@@ -480,7 +486,7 @@ class AlertBox(sprite):
             self.childs.append(_button)
             self.set_rect(self.position)
         else:
-            print("alert box can only have button child")
+            logging.warning("Add button function only take button type, your sprite wasn't added to your alertbox")
 
     def set_text(self,text,wrap_lenght=None,align_center=False):
         self.text = text
@@ -505,8 +511,7 @@ class AlertBox(sprite):
         
         self.surface.blit(_render,_pos)
 
-    def Event(self, event):
-        print("can't use this on an alertbox")
+    def Event(self, event): ...
 
     def Handle(self, event:py.event.Event):
         self.Enter_func(event)
@@ -541,7 +546,8 @@ class Menu:
                 self.background = py.image.load(background).convert() # tuile pour le background
                 self.background = py.transform.scale(self.background, (_window.screen.get_width(), _window.screen.get_height()))
             except FileNotFoundError:
-                print("Your background doesn't seems to exist") 
+                logging.error(f"File not found : Youf background for your menu {self.name} was not found")
+                raise FileNotFoundError
         else:
             self.background = None
 
