@@ -1,14 +1,14 @@
 import setuptools 
   
 with open("README.md", "r") as fh: 
+    [fh.readline() for i in range(4)] # remove first 3 line
     long_description = fh.read()
   
 setuptools.setup( 
     name="pygame_easy_menu", 
 
-    version="0.0.10", 
+    version="0.0.12", 
   
-    
     author="Paul Mairesse",
     author_email="paul.mairesse@free.fr", 
 
