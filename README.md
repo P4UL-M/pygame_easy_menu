@@ -5,8 +5,10 @@
 ### table of content
 
 ### disclaimer
+This package is free of uses, modifications for any project.
 
 ### why ?
+If you want to implement menus in your pygame app in python without recoding every classic widgets, this is for you. Pygame_easy_menu allow you to link your windows to a menu_manager that you can toggle or not. It will then allow you to add widget to every menu with pre-code functions.
 
 ### installation
 
@@ -37,7 +39,7 @@ game = Menu_Manager(pygame=pygame, name="MySuperGame", size=Vector2(1000,800), b
 link the library to an already existing window :
 ```python
 from pygame_easy_menu import *
-from pygame_easy_menu.tools import BG
+from pygame_easy_menu.tools import BG # a free background image for your tests
 
 """
 [...] your previous code
@@ -55,6 +57,8 @@ to add a menu you juste need to create it with the Menu class and it will automa
 principal = Menu("principale",childs=["Play"])
 # you can also select a specific background for a menu
 second = Menu("second",background="myimage.png")
+
+menu_manager.actual_menu = principal #this will change the actual menu of your game, if your menu manager is running this attribute can't be empty.
 ```
 
 To edit the setup function of a menu you need to use the decorator set_setup add pass any function under it, the decorator will update the setup function automatically.
@@ -66,6 +70,26 @@ def setup():
 ```
 
 ### add sprite
+To add a sprite to a menu you need to declare a function where you return a sprite based class and put it under the ``add_sprite`` decorator of you menu. If you want to create your own sprite class you need to pass the ``sprite`` class in its inherance.
+
+```python
+@principal.add_sprite
+def back_button():
+    _button = Button(
+        name="mybutton",
+        path= "myimageofbutton.png"  
+    )
+
+    """
+    put the config of your button here
+    """
+
+    return _button
+```
+
+there currently are the following widget : AlertBox,InputBox,Button,textZone,sprite
+
+### menu functions and parameters
 
 ### sprite functions and parameters
 
