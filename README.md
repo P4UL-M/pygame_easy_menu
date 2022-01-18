@@ -54,7 +54,7 @@ to add a menu you juste need to create it with the Menu class and it will automa
 
 ```python
 # to add a menu :
-principal = Menu("principale",childs=["Play"])
+principal = Menu("principale")
 # you can also select a specific background for a menu
 second = Menu("second",background="myimage.png")
 
@@ -89,9 +89,24 @@ def back_button():
 
 there currently are the following widget : AlertBox,InputBox,Button,textZone,sprite
 
-### menu functions and parameters
+## menu functions and parameters
 
-### sprite functions and parameters
+### child and parents
+
+Every menu can be link with other menu by parent/child system. This way you can retreive a menu either with your global variable or by menu's functions.
+One menu can have multiple children but only one parent. When you define your Menu you can also pass name of children or future children, or the name of its parent. Warning if you say that a menu is the children of a parent menu, the name wont be automatically add to the list of the other instance (for now).
+
+Add a child :
+```python
+principal = Menu("principal",childs=["second"])
+```
+
+Add a parent :
+```python
+second = Menu("second",parent="principal",childs="Connecting")
+```
+
+## sprite functions and parameters
 
 ## exemple code
 

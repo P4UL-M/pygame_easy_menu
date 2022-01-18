@@ -536,7 +536,7 @@ class Menu:
     def __init__(self,name,parent=None,childs=None,background=None):
         self.name:str = name
         self.parent:str = parent
-        self.childs:list[str] = childs
+        self.childs:list[str] = list(childs)
         self.buttons:list[Button] = []
         _window.menus.append(self)
         if _window == None:
