@@ -16,6 +16,8 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     
     packages=setuptools.find_packages(),
+    
+    requires=["textwrap3","pygame","pathlib","logging"],
   
     license="MIT", 
 
@@ -25,4 +27,4 @@ setuptools.setup(
         "Operating System :: OS Independent", 
     ], 
     include_package_data=True,
-) 
+)
