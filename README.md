@@ -90,7 +90,9 @@ def back_button():
 there currently are the following widget : AlertBox,InputBox,Button,textZone,sprite
 
 ### run the menu_manager
-To run the you need to start the ``menu_manager.run()`` function, this function will run until ``menu_manager.running`` is False. You need to put this function at the end of your code or in a function if you don't want your code to be stop.
+To run the you need to start the ``menu_manager.run()`` function, this function will run until ``menu_manager.running`` is False. You need to put this function at the end of your code or in a function if you don't want your code to be stucked.
+
+You can the stop the manager by calling ``menu_manager.stop()`` if you want to close the menu and launch back the game. You can also completly stop the program by calling ``menu_manager.destroy()``.
 
 ## menu functions and parameters
 
@@ -153,7 +155,60 @@ for _button in second.sprites:
 ## sprite functions and parameters
 
 ## exemple code
+```python
+from pygame_easy_menu import *
+from pygame_easy_menu.tools import BG,B_BG
 
+import pygame
+
+pygame.init()
+
+menu_manager = Menu_Manager(name="mygame",size=Vector2(1000,800),background=BG)
+
+main_menu = Menu(name="Main")
+
+@main_menu.add_sprite
+def play_button():
+    _button = Button(
+        name = "Play_Button",
+        path = B_BG
+    )
+
+    _button.set_position(Vector2(0.5,0.33))
+
+    _button.set_text("Play",padding=0.15)
+
+    @_button.on_click
+    def launch():
+        print("my game is launch")
+
+    return _button
+
+@main_menu.add_sprite
+def exit_button():
+    _button = Button(
+        name = "Exit_button",
+        path = B_BG
+    )
+
+    _button.set_position(Vector2(0.5,0.66))
+
+    _button.set_text("Exit",padding=0.15)
+
+    @_button.on_click
+    def launch():
+        menu_manager.destroy()
+
+    return _button
+
+menu_manager.actual_menu = main_menu
+
+if __name__ == "__main__":
+    try:
+        menu_manager.run()
+    except KeyboardInterrupt:
+        menu_manager.destroy()
+```
 
 # a faire
 
