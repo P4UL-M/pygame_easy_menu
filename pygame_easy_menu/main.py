@@ -309,9 +309,9 @@ class Button(sprite):
         self.handles.append(wrap)
     
     def check_layer(self):
-        for _button in _window.actual_menu.buttons:
-            if _button.isactive:
-                if _button.rect.collidepoint(py.mouse.get_pos()) and _button.layer > self.layer:
+        for _sprite in _window.actual_menu.sprites:
+            if _sprite.isactive:
+                if _sprite.rect.collidepoint(py.mouse.get_pos()) and _sprite.layer > self.layer:
                     return False
         else:
             return True
@@ -559,11 +559,11 @@ class Menu:
         """
         decorateur qui ajoute automatiquement le retour de la fonction à la liste
         """
-        _button = func()
-        if _button.__class__.__base__ == sprite:
-            self.sprites.append(_button)
+        _sprite = func()
+        if _sprite.__class__.__base__ == sprite:
+            self.sprites.append(_sprite)
         else:
-            raise TypeError("You must return a sprite based class to add, type returned was :",type(_button))
+            raise TypeError("You must return a sprite based class to add, type returned was :",type(_sprite))
 
     def Update(self):
         """

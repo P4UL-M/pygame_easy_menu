@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 setuptools.setup( 
     name="pygame_easy_menu", 
 
-    version="0.0.1", 
+    version="0.0.15", 
   
     author="Paul Mairesse",
     author_email="paul.mairesse@free.fr", 
