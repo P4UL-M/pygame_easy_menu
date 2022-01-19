@@ -30,18 +30,21 @@ class Menu_Manager(object):
     """
     class principale de pygame qui gère la fenetre
     """
-    def __init__(self,window=None,pygame=None,name=None,size:Vector2=None,background=None,icon=None) -> None:
+    def __init__(self,window=None,name=None,size:Vector2=None,background=None,icon=None) -> None:
         """
         initialisation de pygame et de la fenêtre et des variables globales
         """
-        if not window and not pygame:
-            raise RuntimeError("You must pass either your window either pygame to add a menu manager")
-        self.screen:py.Surface = pygame.display.set_mode(size(),0,32) if not window else window
+        py.init()
 
-        if name and pygame:
-            pygame.display.set_caption(name)
-        if icon and pygame:
-            pygame.display.set_icon(icon)
+        if not window and not size:
+            raise Exception("You must pass either your window either the size of your new window")
+
+        self.screen:py.Surface = window or py.display.set_mode(size(),0,32)
+
+        if name:
+            py.display.set_caption(name)
+        if icon:
+            py.display.set_icon(icon)
 
         self.actual_menu:Menu = None
         self.menus:list[Menu] = []
@@ -75,11 +78,12 @@ class Menu_Manager(object):
         """
         self.running = True
         while self.running:
-            if self.actual_menu.background == None:
-                self.screen.blit(self.background,(0,0))
-            else:
-                self.screen.blit(self.actual_menu.background,(0,0))
-            self.actual_menu.Update()
+            if self.actual_menu:
+                if self.actual_menu.background == None:
+                    self.screen.blit(self.background,(0,0))
+                else:
+                    self.screen.blit(self.actual_menu.background,(0,0))
+                self.actual_menu.Update()
             py.display.update()
 
     def stop(self):
@@ -536,8 +540,8 @@ class Menu:
     def __init__(self,name,parent=None,childs=None,background=None):
         self.name:str = name
         self.parent:str = parent
-        self.childs:list[str] = list(childs)
-        self.buttons:list[Button] = []
+        self.childs:list[str] = [childs] if type(childs)==str else childs
+        self.sprites:list[sprite] = []
         _window.menus.append(self)
         if _window == None:
             raise RuntimeError("Vous devez d'abors initialiser la fenêtre")
@@ -557,7 +561,7 @@ class Menu:
         """
         _button = func()
         if _button.__class__.__base__ == sprite:
-            self.buttons.append(_button)
+            self.sprites.append(_button)
         else:
             raise TypeError("You must return a sprite based class to add, type returned was :",type(_button))
 
@@ -568,10 +572,10 @@ class Menu:
         for _event in py.event.get():
             if py.QUIT==_event.type:
                 _window.destroy()
-            for button in self.buttons:
-                button.Handle(_event)
-        for button in self.buttons:
-            button.Update()
+            for sprite in self.sprites:
+                sprite.Handle(_event)
+        for sprite in self.sprites:
+            sprite.Update()
         self.Draw(_window.screen)
         
     def Draw(self,ecran:py.Surface):
@@ -579,8 +583,8 @@ class Menu:
         fonction pour ajouter chaque bouton à l'écran
         """
         surface = py.Surface((ecran.get_width(),ecran.get_height())).convert_alpha()
-        for button in self.buttons:
-            button.draw(surface)
+        for sprite in self.sprites:
+            sprite.draw(surface)
         ecran.blit(surface,(0,0))
     
     def get_childs(self):
@@ -609,10 +613,10 @@ class Menu:
             if _menu.name == self.parent:
                 return _menu
 
-    def get_button(self,name):
-        for button in self.buttons:
-            if button.name == name:
-                return button
+    def get_sprite(self,name):
+        for sprite in self.sprites:
+            if sprite.name == name:
+                return sprite
 
     def set_setup(self,func):
         """

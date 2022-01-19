@@ -33,7 +33,7 @@ import pygame
 
 pygame.init()
 
-game = Menu_Manager(pygame=pygame, name="MySuperGame", size=Vector2(1000,800), background=BG)
+menu_manager = Menu_Manager(name="MySuperGame", size=Vector2(1000,800), background=BG)
 ```
 
 link the library to an already existing window :
@@ -45,7 +45,7 @@ from pygame_easy_menu.tools import BG # a free background image for your tests
 [...] your previous code
 """
 
-game = Menu_Manager(window=win, background=BG) # win is your pygame window
+menu_manager = Menu_Manager(window=win, background=BG) # win is your pygame window
 ```
 
 ### add menu
@@ -89,6 +89,9 @@ def back_button():
 
 there currently are the following widget : AlertBox,InputBox,Button,textZone,sprite
 
+### run the menu_manager
+To run the you need to start the ``menu_manager.run()`` function, this function will run until ``menu_manager.running`` is False. You need to put this function at the end of your code or in a function if you don't want your code to be stop.
+
 ## menu functions and parameters
 
 ### child and parents
@@ -103,7 +106,48 @@ principal = Menu("principal",childs=["second"])
 
 Add a parent :
 ```python
-second = Menu("second",parent="principal",childs="Connecting")
+second = Menu("second",parent="principal",childs="third")
+```
+// childs parameter can be either a list or a string.
+
+
+You can then when the menu_manager is running get one child of your menu or its parent.
+
+Get a child : Menu.get_child(self,child_name)
+```python
+mychilds = second.get_child("third")
+```
+
+Get all children (return a generator) : Menu.get_childs(self)
+```python
+# return a generator you can itter in
+for child in second.get_childs():
+    """
+    your code here
+    """
+
+# to transform to a list
+mychild = [child for child in second.get_childs()]
+```
+
+Get the parent : Menu.get_parent(self)
+```python
+mychilds = second.get_parent()
+```
+
+### sprites
+
+Once you add a sprite to a Menu you can then access it with either the list of sprite or with the ``get_sprite`` function.
+
+Get a sprite : Menu.get_sprite(self,name)
+```python
+_button = second.get_sprite("mybutton")
+
+# you can also itter in the list directly
+for _button in second.sprites:
+    """
+    your code here
+    """
 ```
 
 ## sprite functions and parameters
@@ -115,3 +159,4 @@ second = Menu("second",parent="principal",childs="Connecting")
 
 ajouter icon par défaut dans le module pour exemple code
 finir read me
+how to run the menu
