@@ -154,6 +154,39 @@ for _button in second.sprites:
 
 ## sprite functions and parameters
 
+### Sprite
+Each widget is a derivate from the sprite class, those fonctions are in most cases in other widget.
+
+change postion : Sprite.set_positon(pos:Vector2)
+```python
+_sprite.set_position(Vector2(110,250)) # absolute position
+_sprite.set_position(Vector2(0.5,0.33)) # position in percentage of the screen
+```
+
+change scale : Sprite.set_scale(pos:Vector2)
+```python
+_sprite.set_scale(Vector2(110,250)) # absolute scale
+_sprite.set_scale(Vector2(0.5,0.33)) # scale in percentage of the previous surface size
+```
+
+add function on event : Sprite.Event(_event:pygame.Event)
+```python
+@_sprite.Event(pygame.QUIT)
+def debug_bye(event):
+    """
+    your code here
+    """
+```
+this function will we executed each time the event pygame.QUIT is raise.
+
+### Button
+
+### TextBox
+
+### InputBox
+
+### Alert boox
+
 ## exemple code
 ```python
 from pygame_easy_menu import *

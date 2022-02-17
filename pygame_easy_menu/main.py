@@ -30,7 +30,7 @@ class Menu_Manager(object):
     """
     class principale de pygame qui gère la fenetre
     """
-    def __init__(self,window=None,name=None,size:Vector2=None,background=None,icon=None) -> None:
+    def __init__(self,window:py.Surface=None,name=None,size:Vector2=None,background=None,icon=None) -> None:
         """
         initialisation de pygame et de la fenêtre et des variables globales
         """
@@ -40,6 +40,7 @@ class Menu_Manager(object):
             raise Exception("You must pass either your window either the size of your new window")
 
         self.screen:py.Surface = window or py.display.set_mode(size(),0,32)
+        if window: size = Vector2(*window.get_size())
 
         if name:
             py.display.set_caption(name)
@@ -582,7 +583,7 @@ class Menu:
         """
         fonction pour ajouter chaque bouton à l'écran
         """
-        surface = py.Surface((ecran.get_width(),ecran.get_height())).convert_alpha()
+        surface = py.Surface((ecran.get_width(),ecran.get_height()),flags=py.SRCALPHA)
         for sprite in self.sprites:
             sprite.draw(surface)
         ecran.blit(surface,(0,0))
