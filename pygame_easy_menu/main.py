@@ -2,7 +2,9 @@ import pygame as py             # PYGAME
 from pygame.locals import *     # PYGAME constant & functions
 
 from sys import exit            # exit script
-import textwrap3                 # wrap text automatically
+import textwrap3                # wrap text automatically
+from typing import overload     # overload init
+
 
 import logging
 
@@ -30,27 +32,34 @@ class Menu_Manager(object):
     """
     class principale de pygame qui gère la fenetre
     """
+    @overload
+    def __init__(self,name=None,size:Vector2=None,background=None,icon=None) -> None: ...
+    @overload
+    def __init__(self,window:py.Surface=None,background=None) -> None: ...
     def __init__(self,window:py.Surface=None,name=None,size:Vector2=None,background=None,icon=None) -> None:
         """
         initialisation de pygame et de la fenêtre et des variables globales
+
+        :param window: pass an existing surface to blit your menu
         """
         py.init()
 
-        if not window and not size:
+        if window: 
+            self.screen:py.Surface = window
+            size = Vector2(*window.get_size())
+        elif size:
+            self.screen:py.Surface = py.display.set_mode(size(),0,32)
+            if name:
+                py.display.set_caption(name)
+            if icon:
+                py.display.set_icon(icon)
+        else:
             raise Exception("You must pass either your window either the size of your new window")
-
-        self.screen:py.Surface = window or py.display.set_mode(size(),0,32)
-        if window: size = Vector2(*window.get_size())
-
-        if name:
-            py.display.set_caption(name)
-        if icon:
-            py.display.set_icon(icon)
-
+        
         self.actual_menu:Menu = None
         self.menus:list[Menu] = []
         self.running = False
-        # ******** le background devrait etre gérer indivituellement pour les menu en option pour overidecelui là
+        
         if background: 
             try:
                 self.background = py.image.load(background).convert() # tuile pour le background
