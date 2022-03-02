@@ -175,8 +175,8 @@ class sprite:
             x= int(self.position.x - (self.scale.x - self.surface.get_width())/2),
             y= int(self.position.y - (self.scale.y - self.surface.get_height())/2)
         )
-        self.set_position(offset,TopLeft=True)
         self.surface = py.transform.scale(self.surface,(self.scale.x,self.scale.y))
+        self.set_position(offset,TopLeft=True)
 
     def set_rect(self,coord:Vector2):
         self.rect = self.surface.get_rect(topleft=(coord.x,coord.y))
