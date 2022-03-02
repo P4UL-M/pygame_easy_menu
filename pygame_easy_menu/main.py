@@ -318,9 +318,9 @@ class Button(sprite):
                 if _event.type == py.MOUSEBUTTONUP:
                     if self.rect.collidepoint(py.mouse.get_pos()):
                         if self.check_layer():
+                            func(*args,**kargs)
                             if _effect != None:
                                 _window.play_effect(_effect)
-                            return func(*args,**kargs)
             self.handles.append(wrap)
         
         return Wrap
