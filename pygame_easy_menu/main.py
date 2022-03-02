@@ -99,14 +99,13 @@ class Menu_Manager(object):
             py.display.update()
 
     def Update(self):
-        while self.running:
-            if self.actual_menu:
-                if self.actual_menu.background == None:
-                    self.screen.blit(self.background,(0,0))
-                else:
-                    self.screen.blit(self.actual_menu.background,(0,0))
-                self.actual_menu.Update()
-
+        if self.actual_menu:
+            if self.actual_menu.background == None:
+                self.screen.blit(self.background,(0,0))
+            else:
+                self.screen.blit(self.actual_menu.background,(0,0))
+            self.actual_menu.Update()
+            
     def stop(self):
         """
         stop the current thread de la classe
