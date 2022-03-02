@@ -69,7 +69,9 @@ class Menu_Manager(object):
                 raise FileNotFoundError
         else:
             self.background = py.Surface(size())
-        
+        def func(*arg,**kargs): ...
+        self.play_effect:function = func
+
         global _window
         _window = self
     
@@ -306,17 +308,22 @@ class Button(sprite):
     def __init__(self,name,path,isactive=True,layer=0):
         super().__init__(name,path,isactive,layer)
 
-    def on_click(self,func):
+    def on_click(self,_effect=None):
         """
         nouvelle fonction qui n'executera que la fonction en cas de click du boutton
         la nouvelle fonction est ajouté dans la liste des function à executé
         """
-        def wrap(_event:py.event.Event,*args,**kargs):   
-            if _event.type == py.MOUSEBUTTONUP:
-                if self.rect.collidepoint(py.mouse.get_pos()):
-                    if self.check_layer():
-                        return func(*args,**kargs)
-        self.handles.append(wrap)
+        def Wrap(func):
+            def wrap(_event:py.event.Event,*args,**kargs):   
+                if _event.type == py.MOUSEBUTTONUP:
+                    if self.rect.collidepoint(py.mouse.get_pos()):
+                        if self.check_layer():
+                            if _effect != None:
+                                _window.play_effect(_effect)
+                            return func(*args,**kargs)
+            self.handles.append(wrap)
+        
+        return Wrap
     
     def check_layer(self):
         for _sprite in _window.actual_menu.sprites:
