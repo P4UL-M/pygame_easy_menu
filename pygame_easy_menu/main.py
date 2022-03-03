@@ -339,6 +339,8 @@ class Button(sprite):
     def check_layer(self):
         for _sprite in _window.actual_menu.sprites:
             if _sprite.isactive:
+                if _sprite.rect == None:
+                    continue
                 if _sprite.rect.collidepoint(py.mouse.get_pos()) and _sprite.layer > self.layer:
                     return False
         else:
