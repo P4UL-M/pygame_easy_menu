@@ -171,7 +171,7 @@ class sprite:
         self.position:Vector2 = Vector2(x,y)
         self.set_rect(Vector2(x,y))
     
-    def set_scale(self,sca:Vector2):
+    def set_scale(self,sca:Vector2,center=True):
         """
         attribue les valeur du vecteur à la taille de l'image, si les valeur sont en float alors elle sont considérer comme un multiplicateur
         """
@@ -181,15 +181,18 @@ class sprite:
         if type(sca.y)==float:
             y = int(self.surface.get_height()*sca.y)
         self.scale = Vector2(x,y)
-        self.actualize_scale()
 
-    def actualize_scale(self):
-        offset = Vector2(
-            x= int(self.position.x - (self.scale.x - self.surface.get_width())/2),
-            y= int(self.position.y - (self.scale.y - self.surface.get_height())/2)
-        )
-        self.surface = py.transform.scale(self.surface,(self.scale.x,self.scale.y))
-        self.set_position(offset,TopLeft=True)
+        # if we want to actualize the position by the center of the im
+        if center:
+            offset = Vector2(
+                x= int(self.position.x - (self.scale.x - self.surface.get_width())/2),
+                y= int(self.position.y - (self.scale.y - self.surface.get_height())/2)
+            )
+            self.surface = py.transform.scale(self.surface,(self.scale.x,self.scale.y))
+            self.set_position(offset,TopLeft=True)
+        else:
+            self.surface = py.transform.scale(self.surface,(self.scale.x,self.scale.y))
+            self.set_rect()  
 
     def set_rect(self,coord:Vector2):
         self.rect = self.surface.get_rect(topleft=(coord.x,coord.y))
