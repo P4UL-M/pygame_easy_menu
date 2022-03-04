@@ -27,6 +27,9 @@ class Vector2:
     def __call__(self) -> tuple:
         """return a tuple of the vector"""
         return (self.x,self.y)
+    
+    def copy(self):
+        return Vector2(self.x,self.y)
         
 class Menu_Manager(object):
     """
