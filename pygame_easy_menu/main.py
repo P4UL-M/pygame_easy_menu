@@ -28,6 +28,12 @@ class Vector2:
         """return a tuple of the vector"""
         return (self.x,self.y)
     
+    def __add__(self,other):
+        if type(other)==Vector2:
+            return Vector2(self.x + other.x, self.y + other.y)
+        else:
+            raise TypeError("You can just add Vector2 between them but you pass :", type(other))
+    
     def copy(self):
         return Vector2(self.x,self.y)
         
