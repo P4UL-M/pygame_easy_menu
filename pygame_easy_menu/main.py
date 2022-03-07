@@ -596,7 +596,7 @@ class Menu:
         decorateur qui ajoute automatiquement le retour de la fonction à la liste
         """
         _sprite = func()
-        if _sprite.__class__.__base__ == sprite:
+        if sprite in _sprite.__class__.__bases__:
             self.sprites.append(_sprite)
         else:
             raise TypeError("You must return a sprite based class to add, type returned was :",type(_sprite))
