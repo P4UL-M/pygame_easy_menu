@@ -3,15 +3,12 @@ from pygame.locals import *     # PYGAME constant & functions
 
 from sys import exit            # exit script
 import textwrap3                # wrap text automatically
-from typing import overload     # overload init
+from typing import overload,Union    # overload init
 
 
 import logging
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
-
-_window = None
-FONT = None
 
 class Vector2:
     """
@@ -36,8 +33,99 @@ class Vector2:
     
     def copy(self):
         return Vector2(self.x,self.y)
-        
+
 class Menu_Manager(object):
+    """
+    class principale de pygame qui gère la fenetre
+    """
+    @overload
+    def setup(name=None,size:Vector2=None,background=None,icon=None) -> None: ...
+    @overload
+    def setup(window:py.Surface=None,background=None) -> None: ...
+    def setup(window:py.Surface=None,name=None,size:Vector2=None,background=None,icon=None) -> None:
+        """
+        initialisation de pygame et de la fenêtre et des variables globales
+
+        :param window: pass an existing surface to blit your menu
+        """
+        py.init()
+
+        if window: 
+            Menu_Manager.screen:py.Surface = window
+            size = Vector2(*window.get_size())
+        elif size:
+            Menu_Manager.screen:py.Surface = py.display.set_mode(size(),0,32)
+            if name:
+                py.display.set_caption(name)
+            if icon:
+                py.display.set_icon(icon)
+        else:
+            raise Exception("You must pass either your window either the size of your new window")
+        
+        Menu_Manager.actual_menu:Menu = None
+        Menu_Manager.menus:list[Menu] = []
+        Menu_Manager.running = False
+        
+        if background: 
+            try:
+                Menu_Manager.background = py.image.load(background).convert() # tuile pour le background
+                Menu_Manager.background = py.transform.scale(Menu_Manager.background, (size.x, size.y))
+            except FileNotFoundError:
+                logging.error("File not found : the background of your menu was not found")
+                raise FileNotFoundError
+        else:
+            Menu_Manager.background = py.Surface(size())
+        def func(*arg,**kargs): ...
+        Menu_Manager.play_effect:function = func
+    
+    def __setattr__(__name: str, __value):
+        super().__setattr__(__name,__value)
+        if __name == "actual_menu" and type(__value)==Menu:
+            __value.setup()
+
+    def set_font(path):
+        Menu_Manager.FONT = path
+
+    def run():
+        """
+        fonction principale du jeu qui gère la fenetre
+        """
+        Menu_Manager.running = True
+        while Menu_Manager.running:
+            if Menu_Manager.actual_menu:
+                if Menu_Manager.actual_menu.background == None:
+                    Menu_Manager.screen.blit(Menu_Manager.background,(0,0))
+                else:
+                    Menu_Manager.screen.blit(Menu_Manager.actual_menu.background,(0,0))
+                Menu_Manager.actual_menu.Update()
+            else:
+                logging.warning("No menu was setup, nothing will be executed this loop.")
+            py.display.update()
+
+    def Update():
+        if Menu_Manager.running:
+            if Menu_Manager.actual_menu:
+                if Menu_Manager.actual_menu.background == None:
+                    Menu_Manager.screen.blit(Menu_Manager.background,(0,0))
+                else:
+                    Menu_Manager.screen.blit(Menu_Manager.actual_menu.background,(0,0))
+                Menu_Manager.actual_menu.Update()
+        else:
+            raise SystemExit
+            
+    def stop():
+        """
+        stop the current thread de la classe
+        """
+        Menu_Manager.running = False
+
+    def destroy():
+        """
+        Use to stop the local thread
+        """
+        exit()
+
+class Sub_Manager(object):
     """
     class principale de pygame qui gère la fenetre
     """
@@ -80,9 +168,6 @@ class Menu_Manager(object):
             self.background = py.Surface(size())
         def func(*arg,**kargs): ...
         self.play_effect:function = func
-
-        global _window
-        _window = self
     
     def __setattr__(self, __name: str, __value):
         super().__setattr__(__name,__value)
@@ -90,8 +175,7 @@ class Menu_Manager(object):
             __value.setup()
 
     def set_font(self,path):
-        global FONT
-        FONT = path
+        self.FONT = path
 
     def run(self):
         """
@@ -130,82 +214,66 @@ class Menu_Manager(object):
         """
         exit()
 
-class sprite:
+class sprite(py.sprite.Sprite):
     def __init__(self,name,path,isactive=True,layer=0):
         self.name = name
-        self.file = path
-        self.position = Vector2(0,0)
-        self.rect = None
         self.layer = layer
         self.isactive = isactive
         
         self.handles = []
         try:
-            self.surface:py.Surface = py.image.load(self.file).convert_alpha()
+            self.image:py.Surface = py.image.load(path).convert_alpha()
         except FileNotFoundError:
             logging.error(f"File not found : your image for your sprite {self.name} was not found")
             raise FileNotFoundError
 
-        self.scale = Vector2(self.surface.get_width(),self.surface.get_height())
+        self.rect = self.image.get_rect(topleft=(0,0))
+        self.initial_size = Vector2(self.image.get_width(),self.image.get_height())
     
     def set_position(self,pos:Vector2,TopLeft=False,parent=None):
         """
         attribue les valeur du vecteur à la position de l'image, si les valeur sont en float alors elle sont considérer comme un multiplicateur
         """
+        x,y = pos.x,pos.y
+        if type(pos.x)==float:
+            if parent:
+                x = int(parent.image.get_width()*pos.x) + parent.position.x
+            else:
+                x = int(Menu_Manager.screen.get_width()*pos.x)
+        elif parent:
+            x = pos.x + parent.position.x
+        if type(pos.y)==float:
+            if parent:
+                y = int(parent.image.get_height()*pos.y) + parent.position.y
+            else:
+                y = int(Menu_Manager.screen.get_height()*pos.y)
+        elif parent:
+            y = pos.y + parent.position.y
+        
+        # asignation of the position
         if TopLeft:
-            x,y = pos.x,pos.y
-            if type(pos.x)==float:
-                if parent:
-                    x = int(parent.surface.get_width()*pos.x) + parent.position.x
-                else:
-                    x = int(_window.screen.get_width()*pos.x)
-            if type(pos.y)==float:
-                if parent:
-                    y = int(parent.surface.get_height()*pos.y) + parent.position.y
-                else:
-                    y = int(_window.screen.get_height()*pos.y)
+            self.rect = self.image.get_rect(topleft=(x,y))
         else:
-            x = int(pos.x - self.surface.get_width()/2)
-            y = int(pos.y - self.surface.get_height()/2)
-            if type(pos.x)==float:
-                if parent:
-                    x = int(parent.surface.get_width()*pos.x - self.surface.get_width()/2) + parent.position.x
-                else:
-                    x = int(_window.screen.get_width()*pos.x - self.surface.get_width()/2)
-            if type(pos.y)==float:
-                if parent:
-                    y = int(parent.surface.get_height()*pos.y - self.surface.get_height()/2) + parent.position.y
-                else:
-                    y = int(_window.screen.get_height()*pos.y - self.surface.get_height()/2)
-        self.position:Vector2 = Vector2(x,y)
-        self.set_rect(Vector2(x,y))
+            self.rect = self.image.get_rect(center=(x,y))
     
-    def set_scale(self,sca:Vector2,center=True):
+    def set_scale(self,sca:Vector2,TopLeft=False):
         """
         attribue les valeur du vecteur à la taille de l'image, si les valeur sont en float alors elle sont considérer comme un multiplicateur
         """
         x,y = sca.x,sca.y
         if type(sca.x)==float:
-            x = int(self.surface.get_width()*sca.x)
+            x = int(self.initial_size.x*sca.x)
         if type(sca.y)==float:
-            y = int(self.surface.get_height()*sca.y)
-        self.scale = Vector2(x,y)
+            y = int(self.initial_size.y*sca.y)
 
         # if we want to actualize the position by the center of the im
-        if center:
-            offset = Vector2(
-                x= int(self.position.x - (self.scale.x - self.surface.get_width())/2),
-                y= int(self.position.y - (self.scale.y - self.surface.get_height())/2)
-            )
-            self.surface = py.transform.scale(self.surface,(self.scale.x,self.scale.y))
-            self.set_position(offset,TopLeft=True)
+        if TopLeft:
+            self.image = py.transform.scale(self.image,(x,y))
+            self.rect = self.image.get_rect(topleft = self.rect.topleft)
         else:
-            self.surface = py.transform.scale(self.surface,(self.scale.x,self.scale.y))
-            self.set_rect()  
-
-    def set_rect(self,coord:Vector2):
-        self.rect = self.surface.get_rect(topleft=(coord.x,coord.y))
-    
+            self.image = py.transform.scale(self.image,(x,y))
+            self.rect = self.image.get_rect(center = self.rect.center) 
+   
     def Event(self,event):
         """
         Ce décorateur crée une fonction qui ajoute celle ci à la liste des fonctions.
@@ -223,43 +291,34 @@ class sprite:
                 def wrap(*args, **kwargs):
                     if self.isactive:
                         return func(*args,**kwargs)
-                setattr(self,"Update",wrap)
+                setattr(self,"update",wrap)
             return True
         return decorator
-
-    def draw(self,ecran):
-        if self.isactive:
-            ecran.blit(self.surface,(self.position.x,self.position.y))
 
     def Handle(self,*arg,**kargs):
         if self.isactive:
             for func in self.handles:
                 func(*arg,**kargs)
 
-    def Update(*args,**kargs): ...
-
 class textZone(sprite):
     """class pour ajouter automatiquement du text"""
-    def __init__(self, name, isactive=True,text_color='white', layer=0):
+    def __init__(self, name,size:Vector2, isactive=True,text_color='white', layer=0):
         self.name = name
-        self.position = Vector2(0,0)
-        self.scale = Vector2(50,50)
-        self.rect = None
         self.isactive = isactive
         self.layer = layer
         self.handles = []
 
-        self.surface = py.Surface((self.scale.x,self.scale.y),flags=py.SRCALPHA)
+        self.image = py.Surface(size(),flags=py.SRCALPHA)
+        self.rect = self.image.get_rect(topleft=(0,0))
 
         self.text_color = text_color
-        self.FONT_PATH = FONT
-        self.FONT = py.font.Font(FONT,36)
-        self.text = None
+        self.FONT = py.font.Font(Menu_Manager.FONT,36)
+        self.font_path = Menu_Manager.FONT
+        self.text = ""
         self.align_center = False
 
-    def set_text(self,text,wrap_lenght=None,align_center=False):
-        self.text = text
-        self.align_center = align_center
+    def set_text(self,text,wrap_lenght=None,aling=(False,False)):
+        self.aling = aling
 
         if wrap_lenght:
             text = ""
@@ -267,62 +326,64 @@ class textZone(sprite):
                 text += "\n" if text else ""
                 text += textwrap3.fill(line,wrap_lenght)
             self.text = text
+        else:
+            self.text = text
         
         self.render()
 
     def render(self):
-        self.scale = self.get_text_size(self.text)
-        self.surface = py.Surface(self.scale(),flags=py.SRCALPHA)
-
         # calcul positions
         x = 0
         y = 0
         # Blit the text
+        _surf = py.Surface(self.get_size(),flags=SRCALPHA)
         for line in self.text.split("\n"):
             txt_surface = self.FONT.render(line, True,self.text_color)
-            if self.align_center:
-                x = self.surface.get_width()//2 - txt_surface.get_width()//2
-            self.surface.blit(txt_surface,(x,y))
-            
+            if self.aling[0]:
+                x = self.image.get_width()//2 - txt_surface.get_width()//2
+            _surf.blit(txt_surface,(x,y))
             y += txt_surface.get_height()
 
-        self.surface = self.surface.convert_alpha()
-        self.actualize_scale()
-        return self.surface
+        x_off = 0
+        if self.aling[0]:
+            x_off = (self.image.get_width()-_surf.get_width())//2
+        y_off = 0
+        if self.aling[1]:
+            y_off = (self.image.get_height()-_surf.get_height())//2
 
-    def get_text_size(self,text:str=None):
-        if text==None:
-            text=self.text
-        max_text = text.split("\n")[0]
-        for line in text.split("\n")[1:]:
-            if self.FONT.size(max_text)[0]<self.FONT.size(line)[0]:
-                max_text = line
-        
-        x = self.FONT.size(max_text)[0]
-        y = 0
+        self.image.blit(_surf,(x_off,y_off))
 
-        for line in text.split("\n"):
-            y += self.FONT.size(line)[1]
-
+    def get_size(self):
+        x,y = self.FONT.size(self.text)
         return Vector2(x,y)
 
-    def set_font(self,name=None,size=36):
-        self.FONT = py.font.Font(name,size)
-        self.FONT_PATH = name
+    def set_font(self,path,size=36):
+        self.FONT = py.font.Font(path,size)
+        self.font_path = path
 
-    def size_to_scale(self,scale:Vector2):
-        """size the police size to an max area"""
-        _size = self.get_text_size()()
-        text_size = 1
-        offset = 32
+    def fit_to_size(self, max_size=128):
+        """
+        Returns a text surface that fits inside given surface. The text
+        will have a font size of 'max_size' or less.
+        """
+        surface_width, surface_height = self.image.get_size()
+        lower, upper = 0, max_size
+        while True:
+            font = py.font.Font(self.font_path, max_size)
+            font_width, font_height = font.size(self.text)
 
-        while offset>=1:
-            self.FONT = py.font.Font(self.FONT_PATH,int(text_size + offset))
-            _size = self.get_text_size()()
-            if _size[0] > scale.x or _size[1] > scale.y:
-                offset /= 2
+            if upper - lower <= 1:
+                return
+            elif max_size < 1:
+                raise ValueError("Text can't fit in the given surface.")
+            elif font_width > surface_width or font_height > surface_height:
+                upper = max_size
+                max_size = (lower + upper) // 2
+            elif font_width < surface_width or font_height < surface_height:
+                lower = max_size
+                max_size = (lower + upper) // 2
             else:
-                text_size += offset
+                return
 
 class Button(sprite):
     """
@@ -343,44 +404,30 @@ class Button(sprite):
                         if self.check_layer():
                             func(*args,**kargs)
                             if _effect != None:
-                                _window.play_effect(_effect)
+                                Menu_Manager.play_effect(_effect)
             self.handles.append(wrap)
         
         return Wrap
     
     def check_layer(self):
-        for _sprite in _window.actual_menu.sprites:
+        for _sprite in Menu_Manager.actual_menu.sprites():
             if _sprite.isactive:
-                if _sprite.rect == None:
-                    continue
                 if _sprite.rect.collidepoint(py.mouse.get_pos()) and _sprite.layer > self.layer:
                     return False
         else:
             return True
 
     def set_text(self,text,color="white",padding=0.05):
-
-        self.surface = py.transform.scale(py.image.load(self.file).convert_alpha(),(self.scale.x,self.scale.y))
-        
         _text = textZone(
             name=f"textZone_{self.name}",
+            size=self.rect.size,
             text_color=color
         ) 
 
-        _text.set_text(text,align_center=True)  
-
-        _size = Vector2(self.surface.get_width()*(1 - padding*2),self.surface.get_height()*(1 - padding*2)) if type(padding)==float else Vector2(self.surface.get_width() - padding,self.surface.get_height() - padding)
-        
-        _text.size_to_scale(_size)
-
-        _render = _text.render()
-
-        _pos = (
-            self.surface.get_width()//2 - _render.get_width()//2,
-            self.surface.get_height()//2 - _render.get_height()//2
-            )
+        _text.set_text(text,aling=(True,True))  
+        _text.fit_to_size()
          
-        self.surface.blit(_render,_pos)
+        self.image.blit(_text.image,(0,0))
 
 class InputBox(sprite):
     """
@@ -575,22 +622,21 @@ class AlertBox(sprite):
 
     def Enter_func(self,_event): ...
 
-class Menu:
+class Menu(py.sprite.Group):
     """
     classe principale du Menu
     """
-    def __init__(self,name,parent=None,childs=None,background=None):
+    def __init__(self,name,parent:str=None,childs:Union[list[str],str]=None,background:str=None,local_menu:Sub_Manager=None):
         self.name:str = name
         self.parent:str = parent
         self.childs:list[str] = [childs] if type(childs)==str else childs
-        self.sprites:list[sprite] = []
-        _window.menus.append(self)
-        if _window == None:
-            raise RuntimeError("Vous devez d'abors initialiser la fenêtre")
+        self._manager = local_menu or Menu_Manager
+        self._manager.menus.append(self)
+
         if background!=None:
             try:
                 self.background = py.image.load(background).convert() # tuile pour le background
-                self.background = py.transform.scale(self.background, (_window.screen.get_width(), _window.screen.get_height()))
+                self.background = py.transform.scale(self.background, (self._manager.screen.get_width(), self._manager.screen.get_height()))
             except FileNotFoundError:
                 logging.error(f"File not found : Youf background for your menu {self.name} was not found")
                 raise FileNotFoundError
@@ -603,7 +649,7 @@ class Menu:
         """
         _sprite = func()
         if sprite in _sprite.__class__.__bases__ or type(_sprite)==sprite:
-            self.sprites.append(_sprite)
+            self.add(_sprite)
         else:
             raise TypeError("You must return a sprite based class to add, type returned was :",type(_sprite))
 
@@ -613,27 +659,18 @@ class Menu:
         """
         for _event in py.event.get():
             if py.QUIT==_event.type:
-                _window.destroy()
-            for sprite in self.sprites:
+                self._manager.destroy()
+            for sprite in self.sprites():
                 sprite.Handle(_event)
-        for sprite in self.sprites:
-            sprite.Update()
-        self.Draw(_window.screen)
-        
-    def Draw(self,ecran:py.Surface):
-        """
-        fonction pour ajouter chaque bouton à l'écran
-        """
-        surface = py.Surface((ecran.get_width(),ecran.get_height()),flags=py.SRCALPHA)
-        for sprite in self.sprites:
-            sprite.draw(surface)
-        ecran.blit(surface,(0,0))
+        for sprite in self.sprites():
+            sprite.update()
+        self.draw(self._manager.screen)
     
     def get_childs(self):
         """
         fonction pour récupérer les menus enfants
         """
-        for _menu in _window.menus:
+        for _menu in self._manager.menus:
             if _menu.name in self.childs:
                 yield _menu
 
@@ -641,7 +678,7 @@ class Menu:
         """
         fonction pour récupérer un menu enfants nomé
         """
-        for _menu in _window.menus:
+        for _menu in self._manager.menus:
             if _menu.name in self.childs and _menu.name == child_name:
                 return _menu
         else:
@@ -651,12 +688,12 @@ class Menu:
         """
         fonction pour récupérer le menu parent
         """
-        for _menu in _window.menus:
+        for _menu in self._manager.menus:
             if _menu.name == self.parent:
                 return _menu
 
     def get_sprite(self,name):
-        for sprite in self.sprites:
+        for sprite in self.sprites():
             if sprite.name == name:
                 return sprite
 
