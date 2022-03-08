@@ -131,7 +131,7 @@ class Menu_Manager(object):
         exit()
 
 class sprite:
-    def __init__(self,name,path,isactive,layer):
+    def __init__(self,name,path,isactive=True,layer=0):
         self.name = name
         self.file = path
         self.position = Vector2(0,0)
