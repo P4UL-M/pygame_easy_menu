@@ -39,97 +39,6 @@ class Menu_Manager(object):
     class principale de pygame qui gère la fenetre
     """
     @overload
-    def setup(name=None,size:Vector2=None,background=None,icon=None) -> None: ...
-    @overload
-    def setup(window:py.Surface=None,background=None) -> None: ...
-    def setup(window:py.Surface=None,name=None,size:Vector2=None,background=None,icon=None) -> None:
-        """
-        initialisation de pygame et de la fenêtre et des variables globales
-
-        :param window: pass an existing surface to blit your menu
-        """
-        py.init()
-
-        if window: 
-            Menu_Manager.screen:py.Surface = window
-            size = Vector2(*window.get_size())
-        elif size:
-            Menu_Manager.screen:py.Surface = py.display.set_mode(size(),0,32)
-            if name:
-                py.display.set_caption(name)
-            if icon:
-                py.display.set_icon(icon)
-        else:
-            raise Exception("You must pass either your window either the size of your new window")
-        
-        Menu_Manager.actual_menu:Menu = None
-        Menu_Manager.menus:list[Menu] = []
-        Menu_Manager.running = False
-        
-        if background: 
-            try:
-                Menu_Manager.background = py.image.load(background).convert() # tuile pour le background
-                Menu_Manager.background = py.transform.scale(Menu_Manager.background, (size.x, size.y))
-            except FileNotFoundError:
-                logging.error("File not found : the background of your menu was not found")
-                raise FileNotFoundError
-        else:
-            Menu_Manager.background = py.Surface(size())
-        def func(*arg,**kargs): ...
-        Menu_Manager.play_effect:function = func
-    
-    def __setattr__(__name: str, __value):
-        super().__setattr__(__name,__value)
-        if __name == "actual_menu" and type(__value)==Menu:
-            __value.setup()
-
-    def set_font(path):
-        Menu_Manager.FONT = path
-
-    def run():
-        """
-        fonction principale du jeu qui gère la fenetre
-        """
-        Menu_Manager.running = True
-        while Menu_Manager.running:
-            if Menu_Manager.actual_menu:
-                if Menu_Manager.actual_menu.background == None:
-                    Menu_Manager.screen.blit(Menu_Manager.background,(0,0))
-                else:
-                    Menu_Manager.screen.blit(Menu_Manager.actual_menu.background,(0,0))
-                Menu_Manager.actual_menu.Update()
-            else:
-                logging.warning("No menu was setup, nothing will be executed this loop.")
-            py.display.update()
-
-    def Update():
-        if Menu_Manager.running:
-            if Menu_Manager.actual_menu:
-                if Menu_Manager.actual_menu.background == None:
-                    Menu_Manager.screen.blit(Menu_Manager.background,(0,0))
-                else:
-                    Menu_Manager.screen.blit(Menu_Manager.actual_menu.background,(0,0))
-                Menu_Manager.actual_menu.Update()
-        else:
-            raise SystemExit
-            
-    def stop():
-        """
-        stop the current thread de la classe
-        """
-        Menu_Manager.running = False
-
-    def destroy():
-        """
-        Use to stop the local thread
-        """
-        exit()
-
-class Sub_Manager(object):
-    """
-    class principale de pygame qui gère la fenetre
-    """
-    @overload
     def __init__(self,name=None,size:Vector2=None,background=None,icon=None) -> None: ...
     @overload
     def __init__(self,window:py.Surface=None,background=None) -> None: ...
@@ -152,8 +61,7 @@ class Sub_Manager(object):
                 py.display.set_icon(icon)
         else:
             raise Exception("You must pass either your window either the size of your new window")
-        
-        self.actual_menu:Menu = None
+
         self.menus:list[Menu] = []
         self.running = False
         
@@ -169,10 +77,18 @@ class Sub_Manager(object):
         def func(*arg,**kargs): ...
         self.play_effect:function = func
     
-    def __setattr__(self, __name: str, __value):
-        super().__setattr__(__name,__value)
-        if __name == "actual_menu" and type(__value)==Menu:
-            __value.setup()
+    __menu = None
+    @property
+    def actual_menu(self):
+        return self.__menu
+    
+    @actual_menu.setter
+    def actual_menu(self,__val):
+        if type(__val)==Menu:
+            self.__menu = __val
+            self.__menu.setup()
+        else:
+            raise TypeError("actual menu must be a Menu")
 
     def set_font(self,path):
         self.FONT = path
@@ -189,6 +105,8 @@ class Sub_Manager(object):
                 else:
                     self.screen.blit(self.actual_menu.background,(0,0))
                 self.actual_menu.Update()
+            else:
+                logging.warning("No menu was setup, nothing will be executed this loop.")
             py.display.update()
 
     def Update(self):
@@ -215,10 +133,12 @@ class Sub_Manager(object):
         exit()
 
 class sprite(py.sprite.Sprite):
-    def __init__(self,name,path,isactive=True,layer=0):
+    def __init__(self,name,path,manager:Menu_Manager,isactive=True,layer=0):
+        super().__init__()
         self.name = name
         self.layer = layer
         self.isactive = isactive
+        self._manager = manager
         
         self.handles = []
         try:
@@ -239,14 +159,14 @@ class sprite(py.sprite.Sprite):
             if parent:
                 x = int(parent.image.get_width()*pos.x) + parent.position.x
             else:
-                x = int(Menu_Manager.screen.get_width()*pos.x)
+                x = int(self._manager.screen.get_width()*pos.x)
         elif parent:
             x = pos.x + parent.position.x
         if type(pos.y)==float:
             if parent:
                 y = int(parent.image.get_height()*pos.y) + parent.position.y
             else:
-                y = int(Menu_Manager.screen.get_height()*pos.y)
+                y = int(self._manager.screen.get_height()*pos.y)
         elif parent:
             y = pos.y + parent.position.y
         
@@ -302,18 +222,19 @@ class sprite(py.sprite.Sprite):
 
 class textZone(sprite):
     """class pour ajouter automatiquement du text"""
-    def __init__(self, name,size:Vector2, isactive=True,text_color='white', layer=0):
+    def __init__(self, name,size:Vector2,manager, isactive=True,text_color='white', layer=0):
         self.name = name
         self.isactive = isactive
         self.layer = layer
         self.handles = []
+        self._manager = manager
 
         self.image = py.Surface(size(),flags=py.SRCALPHA)
         self.rect = self.image.get_rect(topleft=(0,0))
 
         self.text_color = text_color
-        self.FONT = py.font.Font(Menu_Manager.FONT,36)
-        self.font_path = Menu_Manager.FONT
+        self.FONT = py.font.Font(self._manager.FONT,36)
+        self.font_path = self._manager.FONT
         self.text = ""
         self.align_center = False
 
@@ -389,8 +310,8 @@ class Button(sprite):
     """
     classe de bouton simple avec méthode rapide pour Event et On_Click
     """
-    def __init__(self,name,path,isactive=True,layer=0):
-        super().__init__(name,path,isactive,layer)
+    def __init__(self,name,path,manager:Menu_Manager,isactive=True,layer=0):
+        super().__init__(name,path,manager,isactive,layer)
 
     def on_click(self,_effect=None):
         """
@@ -404,13 +325,13 @@ class Button(sprite):
                         if self.check_layer():
                             func(*args,**kargs)
                             if _effect != None:
-                                Menu_Manager.play_effect(_effect)
+                                self._manager.play_effect(_effect)
             self.handles.append(wrap)
         
         return Wrap
     
     def check_layer(self):
-        for _sprite in Menu_Manager.actual_menu.sprites():
+        for _sprite in self._manager.actual_menu.sprites():
             if _sprite.isactive:
                 if _sprite.rect.collidepoint(py.mouse.get_pos()) and _sprite.layer > self.layer:
                     return False
@@ -433,9 +354,9 @@ class InputBox(sprite):
     """
     class de InputBox autonome, permet de rentrer du texte facilement
     """
-    def __init__(self,name,path,paceHolder='Enter text...',color='black',text_color='grey',alter_text_color="white",max_char=16,isactive=True,layer=0):
+    def __init__(self,name,path,manager:Menu_Manager,paceHolder='Enter text...',color='black',text_color='grey',alter_text_color="white",max_char=16,isactive=True,layer=0):
 
-        super().__init__(name,path,isactive,layer)
+        super().__init__(name,path,manager,isactive,layer)
 
         self.color = Color(color)
         self.text = ''
@@ -446,8 +367,9 @@ class InputBox(sprite):
         self.text_color_active = Color(alter_text_color)
 
         self.text_size = self.get_text_size()
-
-        self.FONT = py.font.Font(FONT,self.text_size)
+        if self._manager.FONT == None:
+            raise AttributeError("You must define the FONT of your MenuManager to use Inputbox")
+        self.FONT = py.font.Font(self._manager.FONT,self.text_size)
         self.txt_surface = self.FONT.render(self.paceHolder, True, self.text_color)
         self.active = False
 
@@ -513,15 +435,17 @@ class AlertBox(sprite):
     """
     class de alertbox autonome, permet de rentrer d'afficher une erreur facilement
     """
-    def __init__(self,name,path,color='black',text_color='grey',padding=0.05,isactive=True,layer=0):
-        super().__init__(name,path,isactive,layer)
+    def __init__(self,name,path,manager:Menu_Manager,color='black',text_color='grey',padding=0.05,isactive=True,layer=0):
+        super().__init__(name,path,manager,isactive,layer)
 
         self.color = Color(color)
         self.text = ''
         self.text_color = Color(text_color)
         self.padding = padding
 
-        self.FONT = py.font.Font(FONT,36)
+        if self._manager.FONT == None:
+            raise AttributeError("You must define the FONT of your MenuManager to use Inputbox")
+        self.FONT = py.font.Font(self._manager.FONT,self.text_size)
 
         self.childs:list[Button] = list()
   
@@ -626,11 +550,12 @@ class Menu(py.sprite.Group):
     """
     classe principale du Menu
     """
-    def __init__(self,name,parent:str=None,childs:Union[list[str],str]=None,background:str=None,local_menu:Sub_Manager=None):
+    def __init__(self,name,manager:Menu_Manager,parent:str=None,childs:Union[list[str],str]=None,background:str=None): 
+        super().__init__()
         self.name:str = name
         self.parent:str = parent
         self.childs:list[str] = [childs] if type(childs)==str else childs
-        self._manager = local_menu or Menu_Manager
+        self._manager = manager
         self._manager.menus.append(self)
 
         if background!=None:
