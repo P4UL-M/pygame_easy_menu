@@ -4,6 +4,7 @@ from pygame.locals import *     # PYGAME constant & functions
 from sys import exit            # exit script
 import textwrap3                # wrap text automatically
 from typing import overload,Union    # overload init
+from math import sqrt,atan,pi
 
 
 import logging
@@ -18,6 +19,26 @@ class Vector2:
         self.x = x
         self.y = y
 
+    @property
+    def lenght(self):
+        return sqrt(self.x**2 + self.y**2)
+
+    @property
+    def unity(self):
+        return Vector2(self.x/self.lenght,self.y/self.lenght) if self.lenght > 0 else Vector2(0,0)
+
+    @property
+    def arg(self):
+        if self.x > 0:
+            return atan(self.y/self.x)
+        elif self.x < 0 and self.y >= 0:
+            return atan(self.y/self.x) + pi
+        elif self.x < 0 and self.y < 0:
+            return atan(self.y/self.x) - pi
+        elif self.x==0 and self.y < 0: return -pi/2
+        elif self.x ==0 and self.y > 0: return pi/2
+        else: return None
+
     def __str__(self) -> str:
         return f'({self.x},{self.y})'
 
@@ -25,14 +46,37 @@ class Vector2:
         """return a tuple of the vector"""
         return (self.x,self.y)
     
+    def copy(self):
+        return Vector2(self.x,self.y)
+
+    def __iter__(self):
+        return iter((self.x, self.y))
+
     def __add__(self,other):
         if type(other)==Vector2:
             return Vector2(self.x + other.x, self.y + other.y)
+        if type(other)==tuple:
+            return Vector2(self.x + other[0], self.y + other[1])
         else:
             raise TypeError("You can just add Vector2 between them but you pass :", type(other))
-    
-    def copy(self):
-        return Vector2(self.x,self.y)
+
+    def __iadd__(self,other):
+        return self.__add__(other)
+
+    def __sub__(self,other):
+        if type(other)==Vector2:
+            return Vector2(self.x - other.x, self.y - other.y)
+        if type(other)==tuple:
+            return Vector2(self.x - other[0], self.y - other[1])
+        else:
+            raise TypeError("You can just substract Vector2 between them but you pass :", type(other))
+
+    def __isub__(self,other):
+        return self.__min__(other)
+
+    def __mul__(self,other):
+        if type(other)==int or type(other)==float:
+            return Vector2(self.x*other,self.y*other)
 
 class Menu_Manager(object):
     """
@@ -157,18 +201,18 @@ class sprite(py.sprite.Sprite):
         x,y = pos.x,pos.y
         if type(pos.x)==float:
             if parent:
-                x = int(parent.image.get_width()*pos.x) + parent.position.x
+                x = int(parent.image.get_width()*pos.x) + parent.rect.left
             else:
                 x = int(self._manager.screen.get_width()*pos.x)
         elif parent:
-            x = pos.x + parent.position.x
+            x = pos.x + parent.rect.left
         if type(pos.y)==float:
             if parent:
-                y = int(parent.image.get_height()*pos.y) + parent.position.y
+                y = int(parent.image.get_height()*pos.y) + parent.rect.top
             else:
                 y = int(self._manager.screen.get_height()*pos.y)
         elif parent:
-            y = pos.y + parent.position.y
+            y = pos.y + parent.rect.top
         
         # asignation of the position
         if TopLeft:
@@ -321,11 +365,19 @@ class Button(sprite):
         def Wrap(func):
             def wrap(_event:py.event.Event,*args,**kargs):   
                 if _event.type == py.MOUSEBUTTONUP:
-                    if self.rect.collidepoint(py.mouse.get_pos()):
-                        if self.check_layer():
-                            func(*args,**kargs)
-                            if _effect != None:
-                                self._manager.play_effect(_effect)
+                    if "pos" in kargs.keys():
+                        if self.rect.collidepoint(kargs["pos"]) and _event.button == 1:
+                            if self.check_layer():
+                                del kargs["pos"]
+                                func(*args,**kargs)
+                                if _effect != None:
+                                    self._manager.play_effect(_effect)
+                    else:
+                        if self.rect.collidepoint(py.mouse.get_pos()) and _event.button == 1:
+                            if self.check_layer():
+                                func(*args,**kargs)
+                                if _effect != None:
+                                    self._manager.play_effect(_effect)
             self.handles.append(wrap)
         
         return Wrap
@@ -349,6 +401,7 @@ class Button(sprite):
         _text.fit_to_size()
          
         self.image.blit(_text.image,(0,0))
+#! rewrite
 
 class InputBox(sprite):
     """
@@ -430,6 +483,7 @@ class InputBox(sprite):
             ecran.blit(render,(self.position.x,self.position.y))
 
     def Enter_func(self,_event): ...
+#! rewrite
 
 class AlertBox(sprite):
     """
@@ -545,6 +599,88 @@ class AlertBox(sprite):
             _button.Update(*args,**kargs)
 
     def Enter_func(self,_event): ...
+
+class ScrollableBox(sprite):
+
+    def __init__(self, name, size, manager: Menu_Manager,path:str=None,width_cursor=20,speed=1, isactive=True, layer=0):
+        super(sprite, self).__init__()
+        self.name = name
+        self.layer = layer
+        self.isactive = isactive
+        self._manager = manager
+        
+        self.handles = []
+        self.sprites:list[sprite] = []
+        self.speed = size[1]/120*speed
+
+        self.rect = py.Rect(0,0,*size)
+        self.initial_size = Vector2(self.rect.width,self.rect.height)
+        self.offset = Vector2(0,0)
+
+        if not path:
+            self.cursor = py.Surface((width_cursor,self.rect.height - self.get_max()),flags=SRCALPHA)
+        else:
+            self.cursor = py.transform.scale(py.image.load(path),(width_cursor,self.rect.height - self.get_max()))
+
+    @property
+    def image(self):
+        _surf = py.Surface(self.rect.size,flags=py.SRCALPHA)
+        _object = py.Surface((self.rect.width,self.rect.height + self.get_max()),flags=py.SRCALPHA)
+        
+        for _sprite in self.sprites:
+            _pos = py.Rect(_sprite.rect.left - self.rect.left,_sprite.rect.top - self.rect.top,*_sprite.rect.size)
+            _object.blit(_sprite.image,_pos)
+        
+        _surf.blit(self.cursor,(self.rect.width - self.cursor.get_width(),self.offset.y))
+        _surf.blit(_object,(self.offset * -1)())
+        
+        return _surf
+
+    def add_sprite(self,func):
+            """
+            decorateur qui ajoute automatiquement le retour de la fonction à la liste
+            """
+            _sprite = func()
+            if sprite in _sprite.__class__.__bases__ or type(_sprite)==sprite:
+                self.sprites.append(_sprite)
+                self.cursor = py.transform.scale(self.cursor,(self.cursor.get_width(),self.rect.height - self.get_max()))
+            else:
+                raise TypeError("You must return a sprite based class to add, type returned was :",type(_sprite))
+
+    def update(self, *args, **kwargs):
+        for _sp in self.sprites:
+            _sp.update(*args,**kwargs)
+        return super(sprite,self).update(*args, **kwargs)
+
+    def Handle(self, _event:py.event.Event,*arg, **kargs):
+        if _event.type == py.MOUSEWHEEL:
+            self.offset.y -= _event.y*self.speed
+            if self.offset.y < 0:   self.offset.y = 0
+            elif self.offset.y > self.get_max(): self.offset.y = self.get_max()
+        
+        if _event.type == py.MOUSEBUTTONUP:
+            for _sprite in self.sprites:
+                _sprite.Handle(_event,pos=(py.mouse.get_pos()[0],py.mouse.get_pos()[1] + self.offset.y),*arg, **kargs)
+        else:
+            for _sprite in self.sprites:
+                _sprite.Handle(_event,*arg, **kargs)
+        return super().Handle(_event,*arg, **kargs)
+
+    def get_max(self) -> int:
+        max = 0
+        for _sp in self.sprites:
+            i = _sp.rect.top - self.rect.top + _sp.rect.height
+            if i > max:
+                max = i
+        res = max - self.rect.height
+        return res if res>0 else 0
+
+    def set_scale(self, sca: Vector2, TopLeft=False): ...
+
+    def get_sprite(self,name):
+        for sprite in self.sprites:
+            if sprite.name == name:
+                return sprite
 
 class Menu(py.sprite.Group):
     """
