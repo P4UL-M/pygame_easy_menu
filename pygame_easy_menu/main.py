@@ -727,6 +727,13 @@ class Menu(py.sprite.Group):
             sprite.update()
         self.draw(self._manager.screen)
     
+    def draw(self, surface: py.Surface):
+        sprites = self.sprites()
+        if hasattr(surface, "blits"):
+            self.spritedict.update(
+                zip(sprites, surface.blits((spr.image, spr.rect) for spr in sprites if spr.active))
+            )
+
     def get_childs(self):
         """
         fonction pour récupérer les menus enfants
