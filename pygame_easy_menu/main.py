@@ -731,7 +731,7 @@ class Menu(py.sprite.Group):
         sprites = self.sprites()
         if hasattr(surface, "blits"):
             self.spritedict.update(
-                zip(sprites, surface.blits((spr.image, spr.rect) for spr in sprites if spr.active))
+                zip(sprites, surface.blits((spr.image, spr.rect) for spr in sprites if spr.isactive))
             )
 
     def get_childs(self):
