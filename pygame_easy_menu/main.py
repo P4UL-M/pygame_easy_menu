@@ -311,7 +311,7 @@ class textZone(sprite):
         self.render()
 
     def render(self):
-        self.image.fill((255, 0, 0, 55))
+        self.image.fill((0, 0, 0, 0))
         # calcul positions
         x = 0
         y = 0
