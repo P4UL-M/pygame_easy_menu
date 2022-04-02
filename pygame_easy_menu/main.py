@@ -101,7 +101,7 @@ class Menu_Manager(object):
         """
         py.init()
 
-        if window:
+        if window != None:
             self.screen: py.Surface = window
             size = Vector2(*window.get_size())
         elif size:
@@ -152,7 +152,7 @@ class Menu_Manager(object):
         """
         self.running = True
         while self.running:
-            if self.actual_menu:
+            if self.actual_menu!=None:
                 if self.actual_menu.background == None:
                     self.screen.blit(self.background, (0, 0))
                 else:
@@ -164,7 +164,7 @@ class Menu_Manager(object):
 
     def Update(self):
         if self.running:
-            if self.actual_menu:
+            if self.actual_menu!=None:
                 if self.actual_menu.background == None:
                     self.screen.blit(self.background, (0, 0))
                 else:
