@@ -319,23 +319,24 @@ class textZone(sprite):
         _surf = py.Surface(self.get_size()(), flags=SRCALPHA)
         for line in self.text.split("\n"):
             txt_surface = self.FONT.render(line, True, self.text_color)
-            if self.aling[0]:
-                x = self.image.get_width() // 2 - txt_surface.get_width() // 2
             _surf.blit(txt_surface, (x, y))
             y += txt_surface.get_height() + self.interline * txt_surface.get_height()
 
         x_off = 0
+        test_size = _surf.get_size()
         if self.aling[0]:
-            x_off = (self.image.get_width() - _surf.get_width()) // 2
+            x_off = (self.rect.width - test_size[0]) // 2
         y_off = 0
         if self.aling[1]:
-            y_off = (self.image.get_height() - _surf.get_height()) // 2
+            y_off = (self.rect.height  - test_size[1]) // 2
 
+        print(x_off, y_off)
         self.image.blit(_surf, (x_off, y_off))
 
     def get_size(self):
         x, y = self.FONT.size(self.text)
-        y *= len(self.text.split("\n")) * (1 + self.interline)
+        if len(self.text.split("\n")) > 1:
+            y *= len(self.text.split("\n")) + (1 + self.interline)
         return Vector2(x, y)
 
     def set_font(self, path, size=36):
@@ -347,7 +348,7 @@ class textZone(sprite):
         Returns a text surface that fits inside given surface. The text
         will have a font size of 'max_size' or less.
         """
-        surface_width, surface_height = self.image.get_size()
+        surface_width, surface_height = self.rect.width, self.rect.height
         lower, upper = 0, max_size
         while True:
             font = py.font.Font(self.font_path, max_size)
@@ -411,16 +412,19 @@ class Button(sprite):
             return True
 
     def set_text(self, text, color="white", padding=0.05):
+        _size = Vector2(self.rect.width*(1 - padding), self.rect.height*(1 - padding))
         _text = textZone(
             name=f"textZone_{self.name}",
-            size=self.rect.size,
+            size=Vector2(*_size),
+            manager=self._manager,
             text_color=color
         )
-
+        
         _text.set_text(text, aling=(True, True))
         _text.fit_to_size()
+        _text.render()
 
-        self.image.blit(_text.image, (0, 0))
+        self.image.blit(_text.image, (self.rect.width*(padding/2), self.rect.height*(padding/2)))
 #! rewrite
 
 
