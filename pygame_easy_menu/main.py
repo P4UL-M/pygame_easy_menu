@@ -4,7 +4,7 @@ from pygame.locals import *     # PYGAME constant & functions
 from sys import exit            # exit script
 import textwrap3                # wrap text automatically
 from typing import overload, Union    # overload init
-from math import sqrt, atan, pi
+from math import sqrt, atan, pi, ceil
 
 
 import logging
@@ -278,7 +278,7 @@ class sprite(py.sprite.Sprite):
 class textZone(sprite):
     """class pour ajouter automatiquement du text"""
 
-    def __init__(self, name, size: Vector2, manager, isactive=True, text_color='white', interline = 0.8, layer=0):
+    def __init__(self, name, size: Vector2, manager, isactive=True, text_color='white', interline=0.8, layer=0):
         py.sprite.Sprite.__init__(self)
         self.name = name
         self.isactive = isactive
@@ -287,87 +287,99 @@ class textZone(sprite):
         self._manager = manager
 
         self.image = py.Surface(size(), flags=py.SRCALPHA)
+        self.image.fill((255, 0, 0, 100))
         self.rect = self.image.get_rect(topleft=(0, 0))
 
         self.text_color = text_color
         self.FONT = py.font.Font(self._manager.FONT, 36)
         self.font_path = self._manager.FONT
         self.text = ""
-        self.align_center = False
         self.interline = interline
 
-    def set_text(self, text, wrap_lenght=None, aling=(False, False)):
-        self.aling = aling
+    def set_text(self, text: str, align=(False, False)):
+        self.align = align
 
-        if wrap_lenght:
-            text = ""
-            for line in self.text.split("\n"):
-                text += "\n" if text else ""
-                text += textwrap3.fill(line, wrap_lenght)
-            self.text = text
-        else:
-            self.text = text
+        if "\n" in text:
+            text = text.replace("\n", "")
+            logging.warn("You can't use the \\n in your text")
 
-        self.render()
+        self.text = text
 
-    def render(self):
+        self.render(self.fit_to_size())
+
+    def render(self, matrix):
+        if not matrix:
+            matrix = self.fit_to_size()
+            print(matrix, self.fit_to_size())
+
         self.image.fill((0, 0, 0, 0))
         # calcul positions
         x = 0
         y = 0
-        # Blit the text
-        _surf = py.Surface(self.get_size()(), flags=SRCALPHA)
-        for line in self.text.split("\n"):
-            txt_surface = self.FONT.render(line, True, self.text_color)
-            _surf.blit(txt_surface, (x, y))
-            y += txt_surface.get_height() + self.interline * txt_surface.get_height()
+        _surf = py.Surface(self.rect.size, flags=SRCALPHA)
+        _final_text = []
 
-        x_off = 0
-        test_size = _surf.get_size()
-        if self.aling[0]:
-            x_off = (self.rect.width - test_size[0]) // 2
+        _text = self.text.split(" ")
+        for i in range(len(_text) - 1):
+            _text[i] += " "
+
+        for i, line in enumerate(matrix):
+            _final_text.append("")
+            for j in range(line):
+                _final_text[i] += _text.pop(0)
+
+        for line in _final_text:
+            if self.align[0]:
+                x = (self.rect.width - self.FONT.size(line)[0]) / 2
+            _surf.blit(self.FONT.render(line, True, self.text_color), (x, y))
+            y += self.FONT.get_height() * (1 + self.interline)
+
         y_off = 0
-        if self.aling[1]:
-            y_off = (self.rect.height  - test_size[1]) // 2
+        if self.align[1]:
+            y -= self.FONT.get_height() * self.interline
+            y_off = (self.rect.height - y) // 2
 
-        print(x_off, y_off)
-        self.image.blit(_surf, (x_off, y_off))
-
-    def get_size(self):
-        x, y = self.FONT.size(self.text)
-        if len(self.text.split("\n")) > 1:
-            y *= len(self.text.split("\n")) + (1 + self.interline)
-        return Vector2(x, y)
+        # Blit the text
+        self.image.blit(_surf, (0, y_off))
 
     def set_font(self, path, size=36):
         self.FONT = py.font.Font(path, size)
         self.font_path = path
 
-    def fit_to_size(self, max_size=128):
+    def fit_to_size(self, size=None):
         """
         Returns a text surface that fits inside given surface. The text
         will have a font size of 'max_size' or less.
         """
-        surface_width, surface_height = self.rect.width, self.rect.height
-        lower, upper = 0, max_size
-        while True:
-            font = py.font.Font(self.font_path, max_size)
-            font_width, font_height = font.size(self.text.split("\n")[0])
-            font_height *= len(self.text.split("\n")) * (1 + self.interline)
+        if size is not None:
+            self.FONT = py.font.Font(self.font_path, size)
+        else:
+            size = int(sqrt(self.rect.x * self.rect.y / len(self.text)))
+        words = self.text.split(" ")
 
-            if upper - lower <= 1:
-                break
-            elif max_size < 1:
-                raise ValueError("Text can't fit in the given surface.")
-            elif font_width > surface_width or font_height > surface_height:
-                upper = max_size
-                max_size = (lower + upper) // 2
-            elif font_width < surface_width or font_height < surface_height:
-                lower = max_size
-                max_size = (lower + upper) // 2
+        for i in range(len(words) - 1):
+            words[i] += " "
+
+        sizes = [self.FONT.size(word) for word in words]
+        lines = []
+
+        for word in sizes:
+            i = len(lines)
+            if not i:
+                lines.append([word])
+            elif sum([word[0] for word in lines[i - 1]]) + word[0] < self.rect.width:
+                lines[i - 1].append(word)
             else:
-                break
-        self.FONT = font
+                lines.append([word])
+
+        height = sum(max([word[1] for word in line]) for line in lines)
+        nb_i = len(lines)
+        height += nb_i * self.interline * size  # add the interline
+
+        if height > self.rect.height:
+            return self.fit_to_size(size - 1)
+        else:
+            return [len(line) for line in lines]
 
 
 class Button(sprite):
@@ -661,7 +673,9 @@ class ScrollableBox(sprite):
             _pos = py.Rect(_sprite.rect.left - self.rect.left, _sprite.rect.top - self.rect.top, *_sprite.rect.size)
             _object.blit(_sprite.image, _pos)
 
-        _surf.blit(self.cursor, (self.rect.width - self.cursor.get_width(), self.offset.y))
+        _offset = (1 - (self.rect.height / (self.rect.height + self.get_max())))
+        y = _offset * self.offset.y
+        _surf.blit(self.cursor, (self.rect.width - self.cursor.get_width(), y))
         _surf.blit(_object, (self.offset * -1)())
 
         return _surf
@@ -673,7 +687,9 @@ class ScrollableBox(sprite):
         _sprite = func()
         if sprite in _sprite.__class__.__bases__ or type(_sprite) == sprite:
             self.sprites.append(_sprite)
-            self.cursor = py.transform.scale(self.cursor, (self.cursor.get_width(), self.rect.height - self.get_max()))
+            factor = self.rect.height / (self.rect.height + self.get_max())
+            height = self.rect.height * factor
+            self.cursor = py.transform.scale(self.cursor, (self.cursor.get_width(), height))
         else:
             raise TypeError("You must return a sprite based class to add, type returned was :", type(_sprite))
 
@@ -720,7 +736,7 @@ class Menu(py.sprite.Group):
     classe principale du Menu
     """
 
-    def __init__(self, name, manager: Menu_Manager, parent: str = None, childs: Union[list[str], str] = None, background: str = None):
+    def __init__(self, name, manager, parent= None, childs = None, background= None):
         super().__init__()
         self.name: str = name
         self.parent: str = parent
