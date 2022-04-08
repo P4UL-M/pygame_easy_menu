@@ -354,7 +354,7 @@ class textZone(sprite):
         if size is not None:
             self.FONT = py.font.Font(self.font_path, size)
         else:
-            size = int(sqrt(self.rect.x * self.rect.y / len(self.text)))
+            size = int(sqrt(self.rect.w * self.rect.h / len(self.text)))
         words = self.text.split(" ")
 
         for i in range(len(words) - 1):
@@ -374,7 +374,7 @@ class textZone(sprite):
 
         height = sum(max([word[1] for word in line]) for line in lines)
         nb_i = len(lines)
-        height += nb_i * self.interline * size  # add the interline
+        height += nb_i * self.interline * sizes[0][1]  # add the interline
 
         if height > self.rect.height:
             return self.fit_to_size(size - 1)
