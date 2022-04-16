@@ -660,11 +660,12 @@ class ScrollableBox(sprite):
         self.offset = Vector2(0, 0)
 
         if not path:
-            self.cursor = py.Surface((width_cursor, self.rect.height - self.get_max()), flags=SRCALPHA)
+            self.__cursor = py.Surface((width_cursor, self.rect.height - self.get_max()), flags=SRCALPHA)
         else:
-            self.cursor = py.transform.scale(py.image.load(path), (width_cursor, self.rect.height - self.get_max()))
+            self.__cursor: py.Surface = py.image.load(path)
+        self.cursor = self.__cursor
 
-    @property
+    @ property
     def image(self):
         _surf = py.Surface(self.rect.size, flags=py.SRCALPHA)
         _object = py.Surface((self.rect.width, self.rect.height + self.get_max()), flags=py.SRCALPHA)
@@ -673,10 +674,11 @@ class ScrollableBox(sprite):
             _pos = py.Rect(_sprite.rect.left - self.rect.left, _sprite.rect.top - self.rect.top, *_sprite.rect.size)
             _object.blit(_sprite.image, _pos)
 
-        _offset = (1 - (self.rect.height / (self.rect.height + self.get_max())))
-        y = _offset * self.offset.y
+        factor = (self.rect.height / (self.rect.height + self.get_max()))
+        y = self.offset.y * factor
         _surf.blit(self.cursor, (self.rect.width - self.cursor.get_width(), y))
         _surf.blit(_object, (self.offset * -1)())
+        print(self.offset.y, self.rect.h)
 
         return _surf
 
@@ -689,7 +691,8 @@ class ScrollableBox(sprite):
             self.sprites.append(_sprite)
             factor = self.rect.height / (self.rect.height + self.get_max())
             height = self.rect.height * factor
-            self.cursor = py.transform.scale(self.cursor, (self.cursor.get_width(), height))
+            width = self.rect.w * 0.015
+            self.cursor = self.scale_cursor(height, width)
         else:
             raise TypeError("You must return a sprite based class to add, type returned was :", type(_sprite))
 
@@ -729,6 +732,23 @@ class ScrollableBox(sprite):
         for sprite in self.sprites:
             if sprite.name == name:
                 return sprite
+
+    def scale_cursor(self, y, x=0):
+        w, h = self.__cursor.get_width(), self.__cursor.get_height()
+        top = self.__cursor.subsurface(py.Rect(0, 0, w, h * 0.1)).copy()
+        middle = self.__cursor.subsurface(py.Rect(0, h * 0.1, w, h * 0.8)).copy()
+        bot = self.__cursor.subsurface(py.Rect(0, h - int(h * 0.1), w, int(h * 0.1))).copy()
+        top = py.transform.scale(top, (x or w, y * 0.1))
+        middle = py.transform.scale(middle, (x or w, y * 0.8))
+        bot = py.transform.scale(bot, (x or w, y * 0.1))
+        _surf = py.Surface((x or w, y), flags=SRCALPHA)
+        _surf.blit(top, (0, 0))
+        _y = top.get_height()
+        _surf.blit(middle, (0, _y))
+        _y += middle.get_height()
+        _surf.blit(bot, (0, _y))
+
+        return _surf
 
 
 class Menu(py.sprite.Group):
