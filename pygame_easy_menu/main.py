@@ -310,7 +310,6 @@ class textZone(sprite):
     def render(self, matrix):
         if not matrix:
             matrix = self.fit_to_size()
-            print(matrix, self.fit_to_size())
 
         self.image.fill((0, 0, 0, 0))
         # calcul positions
@@ -678,7 +677,6 @@ class ScrollableBox(sprite):
         y = self.offset.y * factor
         _surf.blit(self.cursor, (self.rect.width - self.cursor.get_width(), y))
         _surf.blit(_object, (self.offset * -1)())
-        print(self.offset.y, self.rect.h)
 
         return _surf
 
