@@ -58,9 +58,9 @@ class Vector2:
         return iter((self.x, self.y))
 
     def __add__(self, other):
-        if type(other) == Vector2:
+        if type(other) is Vector2:
             return Vector2(self.x + other.x, self.y + other.y)
-        if type(other) == tuple:
+        if type(other) is tuple:
             return Vector2(self.x + other[0], self.y + other[1])
         else:
             raise TypeError("You can just add Vector2 between them but you pass :", type(other))
@@ -69,9 +69,9 @@ class Vector2:
         return self.__add__(other)
 
     def __sub__(self, other):
-        if type(other) == Vector2:
+        if type(other) is Vector2:
             return Vector2(self.x - other.x, self.y - other.y)
-        if type(other) == tuple:
+        if type(other) is tuple:
             return Vector2(self.x - other[0], self.y - other[1])
         else:
             raise TypeError("You can just substract Vector2 between them but you pass :", type(other))
@@ -137,7 +137,7 @@ class Menu_Manager(object):
 
     @actual_menu.setter
     def actual_menu(self, __val):
-        if type(__val) == Menu:
+        if type(__val) is Menu:
             self.__menu = __val
             self.__menu.setup()
         else:
@@ -210,14 +210,14 @@ class sprite(py.sprite.Sprite):
         attribue les valeur du vecteur à la position de l'image, si les valeur sont en float alors elle sont considérer comme un multiplicateur
         """
         x, y = pos.x, pos.y
-        if type(pos.x) == float:
+        if type(pos.x) is float:
             if parent:
                 x = int(parent.image.get_width() * pos.x) + parent.rect.left
             else:
                 x = int(self._manager.screen.get_width() * pos.x)
         elif parent:
             x = pos.x + parent.rect.left
-        if type(pos.y) == float:
+        if type(pos.y) is float:
             if parent:
                 y = int(parent.image.get_height() * pos.y) + parent.rect.top
             else:
@@ -236,9 +236,9 @@ class sprite(py.sprite.Sprite):
         attribue les valeur du vecteur à la taille de l'image, si les valeur sont en float alors elle sont considérer comme un multiplicateur
         """
         x, y = sca.x, sca.y
-        if type(sca.x) == float:
+        if type(sca.x) is float:
             x = int(self.initial_size.x * sca.x)
-        if type(sca.y) == float:
+        if type(sca.y) is float:
             y = int(self.initial_size.y * sca.y)
 
         # if we want to actualize the position by the center of the im
@@ -548,9 +548,9 @@ class AlertBox(sprite):
         attribue les valeur du vecteur à la taille de l'image, si les valeur sont en float alors elle sont considérer comme un multiplicateur
         """
         x, y = sca.x, sca.y
-        if type(sca.x) == float:
+        if type(sca.x) is float:
             x = int(self.surface.get_width() * sca.x)
-        if type(sca.y) == float:
+        if type(sca.y) is float:
             y = int(self.surface.get_height() * sca.y)
         self.scale = Vector2(x, y)
 
@@ -594,7 +594,7 @@ class AlertBox(sprite):
     def add_button(self, func):
         _button = func()
 
-        if type(_button) == Button:
+        if type(_button) is Button:
             self.childs.append(_button)
             self.set_rect(self.position)
         else:
@@ -610,7 +610,7 @@ class AlertBox(sprite):
 
         _text.set_text(text, wrap_lenght, align_center)
 
-        _size = Vector2(self.surface.get_width() * (1 - self.padding * 2), self.surface.get_height() * (1 - self.padding * 2)) if type(self.padding) == float else Vector2(self.surface.get_width() - self.padding, self.surface.get_height() - self.padding)
+        _size = Vector2(self.surface.get_width() * (1 - self.padding * 2), self.surface.get_height() * (1 - self.padding * 2)) if type(self.padding) is float else Vector2(self.surface.get_width() - self.padding, self.surface.get_height() - self.padding)
 
         _text.size_to_scale(_size)
 
@@ -686,7 +686,7 @@ class ScrollableBox(sprite):
         decorateur qui ajoute automatiquement le retour de la fonction à la liste
         """
         _sprite = func()
-        if sprite in _sprite.__class__.__bases__ or type(_sprite) == sprite:
+        if sprite in _sprite.__class__.__bases__ or type(_sprite) is sprite:
             self.sprites.append(_sprite)
             factor = self.rect.height / (self.rect.height + self.get_max())
             height = self.rect.height * factor
@@ -759,7 +759,7 @@ class Menu(py.sprite.Group):
         super().__init__()
         self.name: str = name
         self.parent: str = parent
-        self.childs: list[str] = [childs] if type(childs) == str else childs
+        self.childs: list[str] = [childs] if type(childs) is str else childs
         self._manager = manager
         self._manager.menus.append(self)
 
@@ -778,7 +778,7 @@ class Menu(py.sprite.Group):
         decorateur qui ajoute automatiquement le retour de la fonction à la liste
         """
         _sprite = func()
-        if sprite in _sprite.__class__.__bases__ or type(_sprite) == sprite:
+        if sprite in _sprite.__class__.__bases__ or type(_sprite) is sprite:
             self.add(_sprite)
         else:
             raise TypeError("You must return a sprite based class to add, type returned was :", type(_sprite))
