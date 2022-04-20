@@ -179,7 +179,8 @@ class Menu_Manager(object):
         """
         self.running = False
 
-    def destroy(self):
+    @staticmethod
+    def destroy():
         """
         Use to stop the local thread
         """
