@@ -398,29 +398,34 @@ class Button(sprite):
             def wrap(_event: py.event.Event, *args, **kargs):
                 if _event.type == py.MOUSEBUTTONUP:
                     if "pos" in kargs:
-                        if self.rect.collidepoint(kargs["pos"]) and _event.button == 1:
-                            if self.check_layer():
-                                del kargs["pos"]
-                                func(*args, **kargs)
-                                if _effect is not None:
-                                    self._manager.play_effect(_effect)
+                        if (
+                            self.rect.collidepoint(kargs["pos"])
+                            and _event.button == 1
+                            and self.check_layer()
+                        ):
+                            del kargs["pos"]
+                            func(*args, **kargs)
+                            if _effect is not None:
+                                self._manager.play_effect(_effect)
                     else:
-                        if self.rect.collidepoint(py.mouse.get_pos()) and _event.button == 1:
-                            if self.check_layer():
-                                func(*args, **kargs)
-                                if _effect is not None:
-                                    self._manager.play_effect(_effect)
+                        if (
+                            self.rect.collidepoint(py.mouse.get_pos())
+                            and _event.button == 1
+                            and self.check_layer()
+                        ):
+                            func(*args, **kargs)
+                            if _effect is not None:
+                                self._manager.play_effect(_effect)
             self.handles.append(wrap)
 
         return Wrap
 
     def check_layer(self):
-        for _sprite in self._manager.actual_menu.sprites():
-            if _sprite.isactive:
-                if _sprite.rect.collidepoint(py.mouse.get_pos()) and _sprite.layer > self.layer:
-                    return False
-            
-        return True
+        return all(not (
+            _sprite.isactive
+            and _sprite.rect.collidepoint(py.mouse.get_pos())
+            and _sprite.layer > self.layer
+        ) for _sprite in self._manager.actual_menu.sprites())
 
     def set_text(self, text, color="white", padding=0.05):
         _size = Vector2(self.rect.width*(1 - padding), self.rect.height*(1 - padding))
@@ -479,9 +484,12 @@ class InputBox(sprite):
         La fonction passé en décoration n'est executé que si la touche Enter est pressé.
         """
         def wrap(_event, *args, **kwargs):
-            if _event.type == KEYDOWN:
-                if self.isactive and self.active and _event.key == K_RETURN:
-                    return func(*args, **kwargs)
+            if (
+                _event.type == KEYDOWN
+                and self.isactive and self.active
+                and _event.key == K_RETURN
+            ):
+                return func(*args, **kwargs)
         setattr(self, "Enter_func", wrap)
         return True
 
@@ -495,12 +503,13 @@ class InputBox(sprite):
                 self.active = False
                 self.text_color = self.text_color_inactive
         if self.active:
-            if event.type == KEYDOWN:
-                if event.key == K_BACKSPACE:
-                    self.text = self.text[:-1]
-            if event.type == TEXTINPUT:
-                if len(self.text) < self.max_char:
-                    self.text += event.text
+            if event.type == KEYDOWN and event.key == K_BACKSPACE:
+                self.text = self.text[:-1]
+            if (
+                event.type == TEXTINPUT
+                and len(self.text) < self.max_char
+            ):
+                self.text += event.text
         self.Enter_func(event)
 
     def draw(self, ecran):
@@ -584,9 +593,12 @@ class AlertBox(sprite):
         La fonction passé en décoration n'est executé que si la touche Enter est pressé.
         """
         def wrap(_event, *args, **kwargs):
-            if _event.type == KEYDOWN:
-                if self.isactive and _event.key == K_RETURN:
-                    return func(*args, **kwargs)
+            if (
+                _event.type == KEYDOWN
+                and self.isactive
+                and _event.key == K_RETURN
+            ):
+                return func(*args, **kwargs)
         setattr(self, "Enter_func", wrap)
         return True
 
