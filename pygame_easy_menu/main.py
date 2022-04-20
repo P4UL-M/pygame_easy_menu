@@ -419,8 +419,8 @@ class Button(sprite):
             if _sprite.isactive:
                 if _sprite.rect.collidepoint(py.mouse.get_pos()) and _sprite.layer > self.layer:
                     return False
-        else:
-            return True
+            
+        return True
 
     def set_text(self, text, color="white", padding=0.05):
         _size = Vector2(self.rect.width*(1 - padding), self.rect.height*(1 - padding))
@@ -817,8 +817,8 @@ class Menu(py.sprite.Group):
         for _menu in self._manager.menus:
             if _menu.name in self.childs and _menu.name == child_name:
                 return _menu
-        else:
-            raise Exception("Menu not found")
+            
+        raise Exception("Menu not found")
 
     def get_parent(self):
         """
