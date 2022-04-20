@@ -386,9 +386,6 @@ class Button(sprite):
     classe de bouton simple avec méthode rapide pour Event et On_Click
     """
 
-    def __init__(self, name, path, manager: Menu_Manager, isactive=True, layer=0):
-        super().__init__(name, path, manager, isactive, layer)
-
     def on_click(self, _effect=None):
         """
         nouvelle fonction qui n'executera que la fonction en cas de click du boutton
