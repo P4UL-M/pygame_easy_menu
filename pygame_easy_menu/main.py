@@ -421,15 +421,11 @@ class Button(sprite):
         return Wrap
 
     def check_layer(self):
-        for _sprite in self._manager.actual_menu.sprites():
-            if (
-                _sprite.isactive
-                and _sprite.rect.collidepoint(py.mouse.get_pos())
-                and _sprite.layer > self.layer
-            ):
-                return False
-            
-        return True
+        return all(not (
+            _sprite.isactive
+            and _sprite.rect.collidepoint(py.mouse.get_pos())
+            and _sprite.layer > self.layer
+        ) for _sprite in self._manager.actual_menu.sprites())
 
     def set_text(self, text, color="white", padding=0.05):
         _size = Vector2(self.rect.width*(1 - padding), self.rect.height*(1 - padding))
