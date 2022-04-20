@@ -2,9 +2,8 @@ import pygame as py             # PYGAME
 from pygame.locals import *     # PYGAME constant & functions
 
 from sys import exit            # exit script
-import textwrap3                # wrap text automatically
 from typing import overload, Union    # overload init
-from math import sqrt, atan, pi, ceil
+from math import sqrt, atan, pi
 
 
 import logging
