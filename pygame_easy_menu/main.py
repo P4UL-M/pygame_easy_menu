@@ -80,7 +80,7 @@ class Vector2:
         return self.__min__(other)
 
     def __mul__(self, other):
-        if type(other) == int or type(other) == float:
+        if type(other) in (int, float):
             return Vector2(self.x * other, self.y * other)
 
 
