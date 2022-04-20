@@ -83,7 +83,7 @@ class Vector2:
             return Vector2(self.x * other, self.y * other)
 
 
-class Menu_Manager(object):
+class Menu_Manager:
     """
     class principale de pygame qui gère la fenetre
     """
