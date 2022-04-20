@@ -433,7 +433,7 @@ class Button(sprite):
             text_color=color
         )
         
-        _text.set_text(text, aling=(True, True))
+        _text.set_text(text, align=(True, True))
         _text.fit_to_size()
         _text.render()
 
