@@ -397,7 +397,7 @@ class Button(sprite):
         def Wrap(func):
             def wrap(_event: py.event.Event, *args, **kargs):
                 if _event.type == py.MOUSEBUTTONUP:
-                    if "pos" in kargs.keys():
+                    if "pos" in kargs:
                         if self.rect.collidepoint(kargs["pos"]) and _event.button == 1:
                             if self.check_layer():
                                 del kargs["pos"]
