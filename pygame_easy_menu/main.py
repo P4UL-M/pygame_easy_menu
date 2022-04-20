@@ -541,7 +541,7 @@ class AlertBox(sprite):
             raise AttributeError("You must define the FONT of your MenuManager to use Inputbox")
         self.FONT = py.font.Font(self._manager.FONT, self.text_size)
 
-        self.childs: list[Button] = list()
+        self.childs: list[Button] = []
 
     def set_scale(self, sca: Vector2):
         """
