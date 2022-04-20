@@ -101,7 +101,7 @@ class Menu_Manager(object):
         """
         py.init()
 
-        if window != None:
+        if window is not None:
             self.screen: py.Surface = window
             size = Vector2(*window.get_size())
         elif size:
@@ -152,8 +152,8 @@ class Menu_Manager(object):
         """
         self.running = True
         while self.running:
-            if self.actual_menu!=None:
-                if self.actual_menu.background == None:
+            if self.actual_menu is not None:
+                if self.actual_menu.background is None:
                     self.screen.blit(self.background, (0, 0))
                 else:
                     self.screen.blit(self.actual_menu.background, (0, 0))
@@ -164,8 +164,8 @@ class Menu_Manager(object):
 
     def Update(self):
         if self.running:
-            if self.actual_menu!=None:
-                if self.actual_menu.background == None:
+            if self.actual_menu is not None:
+                if self.actual_menu.background is None:
                     self.screen.blit(self.background, (0, 0))
                 else:
                     self.screen.blit(self.actual_menu.background, (0, 0))
@@ -256,7 +256,7 @@ class sprite(py.sprite.Sprite):
         juste avant l'affichage
         """
         def decorator(func):
-            if event != None:
+            if event is not None:
                 def wrap(_event: py.event.Event, *args, **kwargs):
                     if _event.type == event:
                         return func(_event, *args, **kwargs)
@@ -402,13 +402,13 @@ class Button(sprite):
                             if self.check_layer():
                                 del kargs["pos"]
                                 func(*args, **kargs)
-                                if _effect != None:
+                                if _effect is not None:
                                     self._manager.play_effect(_effect)
                     else:
                         if self.rect.collidepoint(py.mouse.get_pos()) and _event.button == 1:
                             if self.check_layer():
                                 func(*args, **kargs)
-                                if _effect != None:
+                                if _effect is not None:
                                     self._manager.play_effect(_effect)
             self.handles.append(wrap)
 
@@ -457,7 +457,7 @@ class InputBox(sprite):
         self.text_color_active = Color(alter_text_color)
 
         self.text_size = self.get_text_size()
-        if self._manager.FONT == None:
+        if self._manager.FONT is None:
             raise AttributeError("You must define the FONT of your MenuManager to use Inputbox")
         self.FONT = py.font.Font(self._manager.FONT, self.text_size)
         self.txt_surface = self.FONT.render(self.paceHolder, True, self.text_color)
@@ -536,7 +536,7 @@ class AlertBox(sprite):
         self.text_color = Color(text_color)
         self.padding = padding
 
-        if self._manager.FONT == None:
+        if self._manager.FONT is None:
             raise AttributeError("You must define the FONT of your MenuManager to use Inputbox")
         self.FONT = py.font.Font(self._manager.FONT, self.text_size)
 
@@ -762,7 +762,7 @@ class Menu(py.sprite.Group):
         self._manager = manager
         self._manager.menus.append(self)
 
-        if background != None:
+        if background is not None:
             try:
                 self.background = py.image.load(background).convert()  # tuile pour le background
                 self.background = py.transform.scale(self.background, (self._manager.screen.get_width(), self._manager.screen.get_height()))
