@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pygame-easy-menu"
+version = "0.0.63"
+description = "Backend-agnostic menu widgets for pygame, with optional ModernGL rendering"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Paul Mairesse", email = "paul.mairesse@free.fr"}]
+dependencies = ["pygame>=2.0"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+opengl = ["moderngl==5.12.0"]
+test = ["pytest>=7", "moderngl==5.12.0", "build>=1"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["pygame_easy_menu*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -17,6 +17,35 @@ command :
 python -m pip install pygame_easy_menu
 ```
 
+For the optional OpenGL 3.3 renderer:
+
+```bash
+python -m pip install "pygame_easy_menu[opengl]==0.0.63"
+```
+
+The default renderer remains a pygame `Surface`, so existing applications do
+not need to change. OpenGL applications can either let the library create the
+window or share an existing ModernGL context:
+
+```python
+from pygame_easy_menu import Menu_Manager, ModernGLBackend, Vector2
+
+backend = ModernGLBackend.create_window(
+    (1920, 1080), logical_size=(1920, 1080), caption="My game"
+)
+menus = Menu_Manager(
+    size=Vector2(1920, 1080), backend=backend, auto_present=True
+)
+```
+
+For an embedded game loop, construct the backend with
+`ModernGLBackend.from_context(ctx, logical_size, framebuffer_size)`, pass
+`auto_present=False`, then call `manager.update(events)` and `manager.render()`.
+The application owns the single final `pygame.display.flip()`.
+
+Widget images are uploaded once. Calls to `set_image()` automatically update
+the GPU cache; call `mark_dirty(rect)` after changing `widget.image` in place.
+
 ## How to use ?
 
 To use menu in your pygame window you first need to initiate a menu manager, this class will be link to your pygame window and allow you to add menu, activate and desactivate it.

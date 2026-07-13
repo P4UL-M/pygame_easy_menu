@@ -2,11 +2,12 @@ import pygame as py             # PYGAME
 from pygame.locals import *     # PYGAME constant & functions
 
 from sys import exit            # exit script
-from typing import overload, Union    # overload init
+from typing import Callable, overload, Union    # overload init
 from math import sqrt, atan, pi
 
 
 import logging
+from .backends import RenderBackend, SurfaceBackend
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -62,7 +63,8 @@ class Vector2:
         if type(other) is tuple:
             return Vector2(self.x + other[0], self.y + other[1])
         else:
-            raise TypeError("You can just add Vector2 between them but you pass :", type(other))
+            raise TypeError(
+                "You can just add Vector2 between them but you pass :", type(other))
 
     def __iadd__(self, other):
         return self.__add__(other)
@@ -73,7 +75,8 @@ class Vector2:
         if type(other) is tuple:
             return Vector2(self.x - other[0], self.y - other[1])
         else:
-            raise TypeError("You can just substract Vector2 between them but you pass :", type(other))
+            raise TypeError(
+                "You can just substract Vector2 between them but you pass :", type(other))
 
     def __isub__(self, other):
         return self.__min__(other)
@@ -83,16 +86,34 @@ class Vector2:
             return Vector2(self.x * other, self.y * other)
 
 
+class _Viewport:
+    """Size-only stand-in used when an OpenGL backend owns the framebuffer."""
+
+    def __init__(self, size):
+        self._size = (int(size[0]), int(size[1]))
+
+    def get_size(self):
+        return self._size
+
+    def get_width(self):
+        return self._size[0]
+
+    def get_height(self):
+        return self._size[1]
 class Menu_Manager:
     """
     class principale de pygame qui gère la fenetre
     """
     @overload
-    def __init__(self, name=None, size: Vector2 = None, background=None, icon=None) -> None: ...
+    def __init__(self, name=None, size: Vector2 = None,
+                 background=None, icon=None) -> None: ...
+
     @overload
     def __init__(self, window: py.Surface = None, background=None) -> None: ...
 
-    def __init__(self, window: py.Surface = None, name=None, size: Vector2 = None, background=None, icon=None) -> None:
+    def __init__(self, window: py.Surface = None, name=None, size: Vector2 = None,
+                 background=None, icon=None, backend: RenderBackend = None,
+                 auto_present=True) -> None:
         """
         initialisation de pygame et de la fenêtre et des variables globales
 
@@ -100,33 +121,43 @@ class Menu_Manager:
         """
         py.init()
 
-        if window is not None:
+        if backend is not None:
+            self.backend = backend
+            size = Vector2(*backend.logical_size)
+            self.screen = _Viewport(backend.logical_size)
+        elif window is not None:
             self.screen: py.Surface = window
             size = Vector2(*window.get_size())
+            self.backend = SurfaceBackend(window)
         elif size:
             self.screen: py.Surface = py.display.set_mode(size(), 0, 32)
+            self.backend = SurfaceBackend(self.screen)
             if name:
                 py.display.set_caption(name)
             if icon:
                 py.display.set_icon(icon)
         else:
-            raise Exception("You must pass either your window either the size of your new window")
+            raise Exception(
+                "You must pass either your window either the size of your new window")
 
         self.menus: list[Menu] = []
         self.running = False
+        self.auto_present = auto_present
+        self.FONT = None
+        self.mouse_position = (0, 0)
 
         if background:
             try:
-                self.background = py.image.load(background).convert()  # tuile pour le background
-                self.background = py.transform.scale(self.background, (size.x, size.y))
+                self.background = py.image.load(background).convert()
             except FileNotFoundError:
-                logging.error("File not found : the background of your menu was not found")
+                logging.error(
+                    "File not found : the background of your menu was not found")
                 raise FileNotFoundError
         else:
             self.background = py.Surface(size())
 
         def func(*arg, **kargs): ...
-        self.play_effect: function = func
+        self.play_effect: Callable = func
 
     __menu = None
 
@@ -136,7 +167,7 @@ class Menu_Manager:
 
     @actual_menu.setter
     def actual_menu(self, __val):
-        if type(__val) is Menu:
+        if isinstance(__val, Menu):
             self.__menu = __val
             self.__menu.setup()
         else:
@@ -151,32 +182,45 @@ class Menu_Manager:
         """
         self.running = True
         while self.running:
-            if self.actual_menu is not None:
-                if self.actual_menu.background is None:
-                    self.screen.blit(self.background, (0, 0))
-                else:
-                    self.screen.blit(self.actual_menu.background, (0, 0))
-                self.actual_menu.Update()
-            else:
-                logging.warning("No menu was setup, nothing will be executed this loop.")
-            py.display.update()
+            self.frame()
 
-    def Update(self):
-        if self.running:
-            if self.actual_menu is not None:
-                if self.actual_menu.background is None:
-                    self.screen.blit(self.background, (0, 0))
-                else:
-                    self.screen.blit(self.actual_menu.background, (0, 0))
-                self.actual_menu.Update()
-        else:
+    def update(self, events=None):
+        if not self.running:
             raise SystemExit
+        if self.actual_menu is None:
+            logging.warning("No menu was setup, nothing will be executed this loop.")
+            return
+        self.mouse_position = self.backend.window_to_logical(py.mouse.get_pos())
+        self.actual_menu.process(py.event.get() if events is None else events)
+
+    def render(self):
+        if self.actual_menu is None:
+            return
+        self.backend.begin()
+        background = self.actual_menu.background or self.background
+        if background is not None:
+            self.backend.draw_surface(background, py.Rect((0, 0), self.backend.logical_size))
+        self.actual_menu.draw(self.backend)
+        self.backend.end()
+
+    def frame(self, events=None):
+        self.update(events)
+        self.render()
+        if self.auto_present:
+            self.backend.present()
+
+    def Update(self, events=None):
+        """Backward-compatible spelling for :meth:`frame`."""
+        self.frame(events)
 
     def stop(self):
         """
         stop the current thread de la classe
         """
         self.running = False
+
+    def release(self):
+        self.backend.release()
 
     @staticmethod
     def destroy():
@@ -189,6 +233,7 @@ class Menu_Manager:
 class sprite(py.sprite.Sprite):
     def __init__(self, name, path, manager: Menu_Manager, isactive=True, layer=0):
         super().__init__()
+        self._init_render_state()
         self.name = name
         self.layer = layer
         self.isactive = isactive
@@ -198,11 +243,81 @@ class sprite(py.sprite.Sprite):
         try:
             self.image: py.Surface = py.image.load(path).convert_alpha()
         except FileNotFoundError:
-            logging.error(f"File not found : your image for your sprite {self.name} was not found")
+            logging.error(
+                f"File not found : your image for your sprite {self.name} was not found")
             raise FileNotFoundError
 
         self.rect = self.image.get_rect(topleft=(0, 0))
-        self.initial_size = Vector2(self.image.get_width(), self.image.get_height())
+        self.initial_size = Vector2(
+            self.image.get_width(), self.image.get_height())
+
+    def _init_render_state(self):
+        self._image = None
+        self._render_revision = 0
+        self._dirty_rect = None
+        self.tint = (1.0, 1.0, 1.0, 1.0)
+        self.opacity = 1.0
+        self.angle = 0.0
+        self.flip_x = False
+        self.flip_y = False
+        self.source_rect = None
+
+    @property
+    def image(self):
+        return self._image
+
+    @image.setter
+    def image(self, surface):
+        if surface is getattr(self, "_image", None):
+            return
+        self._image = surface
+        self.mark_dirty()
+
+    @property
+    def render_revision(self):
+        return self._render_revision
+
+    def set_image(self, surface):
+        """Replace the visual and invalidate its cached GPU texture."""
+        self.image = surface
+        if hasattr(self, "rect"):
+            self.rect = surface.get_rect(center=self.rect.center)
+        return self
+
+    def mark_dirty(self, rect=None):
+        """Notify render backends after mutating ``image`` in place."""
+        self._render_revision = getattr(self, "_render_revision", 0) + 1
+        self._dirty_rect = py.Rect(rect) if rect is not None else None
+        return self
+
+    @property
+    def surface(self):
+        return self.image
+
+    @surface.setter
+    def surface(self, value):
+        self.image = value
+
+    @property
+    def position(self):
+        return Vector2(*self.rect.topleft)
+
+    @property
+    def scale(self):
+        return getattr(self, "_scale", Vector2(*self.rect.size))
+
+    @scale.setter
+    def scale(self, value):
+        self._scale = value
+
+    def set_rect(self, coord: Vector2):
+        self.rect = self.image.get_rect(topleft=coord())
+
+    def draw(self, target):
+        if hasattr(target, "draw_widget"):
+            target.draw_widget(self)
+        elif self.isactive:
+            target.blit(self.image, self.rect)
 
     def set_position(self, pos: Vector2, TopLeft=False, parent=None):
         """
@@ -247,6 +362,7 @@ class sprite(py.sprite.Sprite):
         else:
             self.image = py.transform.scale(self.image, (x, y))
             self.rect = self.image.get_rect(center=self.rect.center)
+        self._scale = Vector2(x, y)
 
     def Event(self, event):
         """
@@ -280,6 +396,7 @@ class textZone(sprite):
 
     def __init__(self, name, size: Vector2, manager, isactive=True, text_color='white', interline=0.8, layer=0):
         py.sprite.Sprite.__init__(self)
+        self._init_render_state()
         self.name = name
         self.isactive = isactive
         self.layer = layer
@@ -340,6 +457,7 @@ class textZone(sprite):
 
         # Blit the text
         self.image.blit(_surf, (0, y_off))
+        self.mark_dirty()
 
     def set_font(self, path, size=36):
         self.FONT = py.font.Font(path, size)
@@ -394,50 +512,44 @@ class Button(sprite):
         def Wrap(func):
             def wrap(_event: py.event.Event, *args, **kargs):
                 if _event.type == py.MOUSEBUTTONUP:
-                    if "pos" in kargs:
-                        if (
-                            self.rect.collidepoint(kargs["pos"])
-                            and _event.button == 1
-                            and self.check_layer()
-                        ):
-                            del kargs["pos"]
-                            func(*args, **kargs)
-                            if _effect is not None:
-                                self._manager.play_effect(_effect)
-                    else:
-                        if (
-                            self.rect.collidepoint(py.mouse.get_pos())
-                            and _event.button == 1
-                            and self.check_layer()
-                        ):
-                            func(*args, **kargs)
-                            if _effect is not None:
-                                self._manager.play_effect(_effect)
+                    position = kargs.pop("pos", getattr(_event, "pos", py.mouse.get_pos()))
+                    if (
+                        self.rect.collidepoint(position)
+                        and _event.button == 1
+                        and self.check_layer(position)
+                    ):
+                        func(*args, **kargs)
+                        if _effect is not None:
+                            self._manager.play_effect(_effect)
             self.handles.append(wrap)
 
         return Wrap
 
-    def check_layer(self):
+    def check_layer(self, position=None):
+        position = position or py.mouse.get_pos()
         return all(not (
             _sprite.isactive
-            and _sprite.rect.collidepoint(py.mouse.get_pos())
+            and _sprite.rect.collidepoint(position)
             and _sprite.layer > self.layer
-        ) for _sprite in self._manager.actual_menu.sprites())
+        ) for _sprite in self._manager.actual_menu.sprites()) and self in self._manager.actual_menu.sprites()
 
     def set_text(self, text, color="white", padding=0.05):
-        _size = Vector2(self.rect.width*(1 - padding), self.rect.height*(1 - padding))
+        _size = Vector2(self.rect.width*(1 - padding),
+                        self.rect.height*(1 - padding))
         _text = textZone(
             name=f"textZone_{self.name}",
             size=Vector2(*_size),
             manager=self._manager,
             text_color=color
         )
-        
+
         _text.set_text(text, align=(True, True))
         _text.fit_to_size()
         _text.render()
 
-        self.image.blit(_text.image, (self.rect.width*(padding/2), self.rect.height*(padding/2)))
+        self.image.blit(_text.image, (self.rect.width *
+                        (padding/2), self.rect.height*(padding/2)))
+        self.mark_dirty()
 #! rewrite
 
 
@@ -459,11 +571,21 @@ class InputBox(sprite):
         self.text_color_active = Color(alter_text_color)
 
         self.text_size = self.get_text_size()
-        if self._manager.FONT is None:
-            raise AttributeError("You must define the FONT of your MenuManager to use Inputbox")
         self.FONT = py.font.Font(self._manager.FONT, self.text_size)
-        self.txt_surface = self.FONT.render(self.paceHolder, True, self.text_color)
+        self.txt_surface = self.FONT.render(
+            self.paceHolder, True, self.text_color)
+        self._text_revision = 0
         self.active = False
+
+    @property
+    def text_revision(self):
+        return self._text_revision
+
+    def _refresh_text(self):
+        self.txt_surface = self.FONT.render(
+            self.text or self.paceHolder, True, self.text_color
+        )
+        self._text_revision += 1
 
     def get_text_size(self):
         i = self.surface.get_height()
@@ -472,7 +594,8 @@ class InputBox(sprite):
         while int(self.surface.get_height() * 0.80) < size_temp[1] or int(self.surface.get_width() * 0.9) < size_temp[0]:
             i -= 1
             temp = py.font.Font(None, i)
-            size_temp = temp.size("A" * max(self.max_char, len(self.paceHolder)))
+            size_temp = temp.size(
+                "A" * max(self.max_char, len(self.paceHolder)))
         return(i)
 
     def on_enter(self, func):
@@ -491,8 +614,10 @@ class InputBox(sprite):
         return True
 
     def Handle(self, event: py.event.Event):
+        previous = (self.text, self.active, self.text_color)
         if event.type == MOUSEBUTTONDOWN:
-            if self.rect.collidepoint(event.pos):  # If the user clicked on the input_box rect.
+            # If the user clicked on the input_box rect.
+            if self.rect.collidepoint(event.pos):
                 # Toggle the active variable.
                 self.active = not self.active
                 self.text_color = self.text_color_active if self.active else self.text_color_inactive
@@ -508,11 +633,14 @@ class InputBox(sprite):
             ):
                 self.text += event.text
         self.Enter_func(event)
+        if previous != (self.text, self.active, self.text_color):
+            self._refresh_text()
 
     def draw(self, ecran):
         render = self.surface.copy()
 
-        self.txt_surface = self.FONT.render(self.text or self.paceHolder, True, self.text_color)
+        self.txt_surface = self.FONT.render(
+            self.text or self.paceHolder, True, self.text_color)
 
         # calcul positions
         x = int(render.get_width() * 0.05)
@@ -520,7 +648,8 @@ class InputBox(sprite):
         # Blit the text.
         render.blit(self.txt_surface, (x, y))
         if py.time.get_ticks() % 1000 > 500 and self.active:
-            cursor = Rect(self.txt_surface.get_rect(topleft=(x, y - 5)).topright, (3, self.txt_surface.get_rect().height))
+            cursor = Rect(self.txt_surface.get_rect(
+                topleft=(x, y - 5)).topright, (3, self.txt_surface.get_rect().height))
             py.draw.rect(render, self.text_color, cursor)
         if self.isactive:
             ecran.blit(render, (self.position.x, self.position.y))
@@ -541,10 +670,12 @@ class AlertBox(sprite):
         self.text = ''
         self.text_color = Color(text_color)
         self.padding = padding
+        self.text_centered = True
+        self._text_revision = 0
 
-        if self._manager.FONT is None:
-            raise AttributeError("You must define the FONT of your MenuManager to use Inputbox")
+        self.text_size = max(12, int(self.image.get_height() * 0.18))
         self.FONT = py.font.Font(self._manager.FONT, self.text_size)
+        self.txt_surface = self.FONT.render("", True, self.text_color)
 
         self.childs: list[Button] = []
 
@@ -552,15 +683,18 @@ class AlertBox(sprite):
         """
         attribue les valeur du vecteur à la taille de l'image, si les valeur sont en float alors elle sont considérer comme un multiplicateur
         """
-        x, y = sca.x, sca.y
-        if type(sca.x) is float:
-            x = int(self.surface.get_width() * sca.x)
-        if type(sca.y) is float:
-            y = int(self.surface.get_height() * sca.y)
-        self.scale = Vector2(x, y)
-
-        self.actualize_child_position()
-        self.actualize_scale()
+        old_rect = self.rect.copy()
+        relative = [
+            ((child.rect.centerx - old_rect.left) / max(1, old_rect.width),
+             (child.rect.centery - old_rect.top) / max(1, old_rect.height))
+            for child in self.childs
+        ]
+        super().set_scale(sca)
+        for child, (x, y) in zip(self.childs, relative):
+            child.set_position(
+                Vector2(self.rect.left + x * self.rect.width,
+                        self.rect.top + y * self.rect.height)
+            )
 
     def actualize_child_position(self):
         # calcul pourcentage d'augmentation
@@ -571,8 +705,10 @@ class AlertBox(sprite):
         for _button in self.childs:
             # calcul position pourcentage du centre du parent
             pos = Vector2(
-                ((_button.position.x + _button.scale.x / 2) - self.position.x - self.surface.get_width() / 2) / self.surface.get_width(),
-                ((_button.position.y + _button.scale.y / 2) - self.position.y - self.surface.get_height() / 2) / self.surface.get_height()
+                ((_button.position.x + _button.scale.x / 2) - self.position.x -
+                 self.surface.get_width() / 2) / self.surface.get_width(),
+                ((_button.position.y + _button.scale.y / 2) - self.position.y -
+                 self.surface.get_height() / 2) / self.surface.get_height()
             )
             # calcul nouvelle position par rapport au coin haut gauche du parent
             pos.x = pos.x * offset.x + 0.5
@@ -602,34 +738,45 @@ class AlertBox(sprite):
     def add_button(self, func):
         _button = func()
 
-        if type(_button) is Button:
+        if isinstance(_button, Button):
             self.childs.append(_button)
             self.set_rect(self.position)
         else:
-            logging.warning("Add button function only take button type, your sprite wasn't added to your alertbox")
+            logging.warning(
+                "Add button function only take button type, your sprite wasn't added to your alertbox")
 
     def set_text(self, text, wrap_lenght=None, align_center=False):
         self.text = text
-
-        _text = textZone(
-            name=f'text_{self.name}',
-            text_color=self.text_color
+        width = int(
+            self.rect.width * (1 - self.padding * 2)
+            if isinstance(self.padding, float)
+            else self.rect.width - self.padding * 2
         )
+        words = text.split()
+        lines = []
+        line = ""
+        for word in words:
+            candidate = f"{line} {word}".strip()
+            if line and self.FONT.size(candidate)[0] > width:
+                lines.append(line)
+                line = word
+            else:
+                line = candidate
+        if line:
+            lines.append(line)
+        rendered = [self.FONT.render(line, True, self.text_color) for line in lines]
+        height = sum(item.get_height() for item in rendered) or self.FONT.get_height()
+        self.txt_surface = py.Surface((max(1, width), height), py.SRCALPHA)
+        y = 0
+        for item in rendered:
+            x = (width - item.get_width()) // 2 if align_center else 0
+            self.txt_surface.blit(item, (x, y))
+            y += item.get_height()
+        self._text_revision += 1
 
-        _text.set_text(text, wrap_lenght, align_center)
-
-        _size = Vector2(self.surface.get_width() * (1 - self.padding * 2), self.surface.get_height() * (1 - self.padding * 2)) if type(self.padding) is float else Vector2(self.surface.get_width() - self.padding, self.surface.get_height() - self.padding)
-
-        _text.size_to_scale(_size)
-
-        _render = _text.render()
-
-        _pos = (
-            self.surface.get_width() // 2 - _render.get_width() // 2,
-            self.surface.get_height() // 2 - _render.get_height() // 2
-        )
-
-        self.surface.blit(_render, _pos)
+    @property
+    def text_revision(self):
+        return self._text_revision
 
     def Event(self, event): ...
 
@@ -654,6 +801,7 @@ class ScrollableBox(sprite):
 
     def __init__(self, name, size, manager: Menu_Manager, path: str = None, width_cursor=20, speed=1, isactive=True, layer=0):
         super(sprite, self).__init__()
+        self._init_render_state()
         self.name = name
         self.layer = layer
         self.isactive = isactive
@@ -668,7 +816,8 @@ class ScrollableBox(sprite):
         self.offset = Vector2(0, 0)
 
         if not path:
-            self.__cursor = py.Surface((width_cursor, self.rect.height - self.get_max()), flags=SRCALPHA)
+            self.__cursor = py.Surface(
+                (width_cursor, self.rect.height - self.get_max()), flags=SRCALPHA)
         else:
             self.__cursor: py.Surface = py.image.load(path)
         self.cursor = self.__cursor
@@ -676,10 +825,12 @@ class ScrollableBox(sprite):
     @ property
     def image(self):
         _surf = py.Surface(self.rect.size, flags=py.SRCALPHA)
-        _object = py.Surface((self.rect.width, self.rect.height + self.get_max()), flags=py.SRCALPHA)
+        _object = py.Surface(
+            (self.rect.width, self.rect.height + self.get_max()), flags=py.SRCALPHA)
 
         for _sprite in self.sprites:
-            _pos = py.Rect(_sprite.rect.left - self.rect.left, _sprite.rect.top - self.rect.top, *_sprite.rect.size)
+            _pos = py.Rect(_sprite.rect.left - self.rect.left,
+                           _sprite.rect.top - self.rect.top, *_sprite.rect.size)
             _object.blit(_sprite.image, _pos)
 
         factor = (self.rect.height / (self.rect.height + self.get_max()))
@@ -694,14 +845,16 @@ class ScrollableBox(sprite):
         decorateur qui ajoute automatiquement le retour de la fonction à la liste
         """
         _sprite = func()
-        if sprite in _sprite.__class__.__bases__ or type(_sprite) is sprite:
+        if isinstance(_sprite, sprite):
             self.sprites.append(_sprite)
             factor = self.rect.height / (self.rect.height + self.get_max())
             height = self.rect.height * factor
             width = self.rect.w * 0.015
             self.cursor = self.scale_cursor(height, width)
+            self.mark_dirty()
         else:
-            raise TypeError("You must return a sprite based class to add, type returned was :", type(_sprite))
+            raise TypeError(
+                "You must return a sprite based class to add, type returned was :", type(_sprite))
 
     def update(self, *args, **kwargs):
         for _sp in self.sprites:
@@ -717,8 +870,13 @@ class ScrollableBox(sprite):
                 self.offset.y = self.get_max()
 
         if _event.type == py.MOUSEBUTTONUP:
+            position = kargs.pop("pos", getattr(_event, "pos", py.mouse.get_pos()))
             for _sprite in self.sprites:
-                _sprite.Handle(_event, pos=(py.mouse.get_pos()[0], py.mouse.get_pos()[1] + self.offset.y), *arg, **kargs)
+                child_position = (position[0], position[1] + self.offset.y)
+                child_event = py.event.Event(
+                    _event.type, {**_event.dict, "pos": child_position}
+                )
+                _sprite.Handle(child_event, *arg, **kargs)
         else:
             for _sprite in self.sprites:
                 _sprite.Handle(_event, *arg, **kargs)
@@ -743,8 +901,10 @@ class ScrollableBox(sprite):
     def scale_cursor(self, y, x=0):
         w, h = self.__cursor.get_width(), self.__cursor.get_height()
         top = self.__cursor.subsurface(py.Rect(0, 0, w, h * 0.1)).copy()
-        middle = self.__cursor.subsurface(py.Rect(0, h * 0.1, w, h * 0.8)).copy()
-        bot = self.__cursor.subsurface(py.Rect(0, h - int(h * 0.1), w, int(h * 0.1))).copy()
+        middle = self.__cursor.subsurface(
+            py.Rect(0, h * 0.1, w, h * 0.8)).copy()
+        bot = self.__cursor.subsurface(
+            py.Rect(0, h - int(h * 0.1), w, int(h * 0.1))).copy()
         top = py.transform.scale(top, (x or w, y * 0.1))
         middle = py.transform.scale(middle, (x or w, y * 0.8))
         bot = py.transform.scale(bot, (x or w, y * 0.1))
@@ -763,7 +923,7 @@ class Menu(py.sprite.Group):
     classe principale du Menu
     """
 
-    def __init__(self, name, manager, parent= None, childs = None, background= None):
+    def __init__(self, name, manager, parent=None, childs=None, background=None):
         super().__init__()
         self.name: str = name
         self.parent: str = parent
@@ -773,10 +933,10 @@ class Menu(py.sprite.Group):
 
         if background is not None:
             try:
-                self.background = py.image.load(background).convert()  # tuile pour le background
-                self.background = py.transform.scale(self.background, (self._manager.screen.get_width(), self._manager.screen.get_height()))
+                self.background = py.image.load(background).convert()
             except FileNotFoundError:
-                logging.error(f"File not found : Youf background for your menu {self.name} was not found")
+                logging.error(
+                    f"File not found : Youf background for your menu {self.name} was not found")
                 raise FileNotFoundError
         else:
             self.background = None
@@ -786,29 +946,43 @@ class Menu(py.sprite.Group):
         decorateur qui ajoute automatiquement le retour de la fonction à la liste
         """
         _sprite = func()
-        if sprite in _sprite.__class__.__bases__ or type(_sprite) is sprite:
+        if isinstance(_sprite, sprite):
             self.add(_sprite)
         else:
-            raise TypeError("You must return a sprite based class to add, type returned was :", type(_sprite))
+            raise TypeError(
+                "You must return a sprite based class to add, type returned was :", type(_sprite))
 
-    def Update(self):
+    def process(self, events):
         """
         fonction update des bouton du menu avec en premier les event, ensuite les function effectué chaque frame et finalement l'affichage
         """
-        for _event in py.event.get():
+        for _event in events:
             if py.QUIT == _event.type:
                 self._manager.destroy()
-            for sprite in self.sprites():
-                sprite.Handle(_event)
-        for sprite in self.sprites():
-            sprite.update()
-        self.draw(self._manager.screen)
+            if hasattr(_event, "pos"):
+                logical_pos = self._manager.backend.window_to_logical(_event.pos)
+                _event = py.event.Event(_event.type, {**_event.dict, "pos": logical_pos})
+            for item in self.sprites():
+                item.Handle(_event)
+        for item in self.sprites():
+            item.update()
 
-    def draw(self, surface: py.Surface):
+    def Update(self):
+        """Backward-compatible menu-local frame."""
+        self.process(py.event.get())
+        self._manager.render()
+        if self._manager.auto_present:
+            self._manager.backend.present()
+
+    def draw(self, surface):
         sprites = self.sprites()
-        if hasattr(surface, "blits"):
+        if hasattr(surface, "draw_widget"):
+            for item in sorted(sprites, key=lambda value: value.layer):
+                surface.draw_widget(item)
+        elif hasattr(surface, "blits"):
             self.spritedict.update(
-                zip(sprites, surface.blits((spr.image, spr.rect) for spr in sprites if spr.isactive))
+                zip(sprites, surface.blits((spr.image, spr.rect)
+                    for spr in sprites if spr.isactive))
             )
 
     def get_childs(self):
@@ -826,7 +1000,7 @@ class Menu(py.sprite.Group):
         for _menu in self._manager.menus:
             if _menu.name in self.childs and _menu.name == child_name:
                 return _menu
-            
+
         raise Exception("Menu not found")
 
     def get_parent(self):
