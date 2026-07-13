@@ -4,6 +4,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 import moderngl
+import pytest
 
 from pygame_easy_menu import (
     AlertBox, InputBox, Menu, Menu_Manager, ModernGLBackend, ScrollableBox,
@@ -18,6 +19,13 @@ def setup_module():
 
 def teardown_module():
     pygame.quit()
+
+
+def create_gl33_context():
+    try:
+        return moderngl.create_standalone_context(require=330)
+    except Exception as error:
+        pytest.skip(f"OpenGL 3.3 context unavailable on this runner: {error}")
 
 
 def test_surface_backend_keeps_existing_menu_flow(tmp_path):
@@ -60,7 +68,7 @@ def test_backend_coordinate_conversion_is_stable():
 
 
 def test_moderngl_backend_draws_and_updates_a_texture_region():
-    context = moderngl.create_standalone_context(require=330)
+    context = create_gl33_context()
     framebuffer = context.simple_framebuffer((8, 8), components=4)
     framebuffer.use()
     backend = ModernGLBackend.from_context(context, (8, 8), (8, 8))
@@ -99,7 +107,7 @@ def test_all_composite_widgets_render_with_moderngl(tmp_path):
     base = pygame.Surface((40, 20), pygame.SRCALPHA)
     base.fill("navy")
     pygame.image.save(base, str(image_path))
-    context = moderngl.create_standalone_context(require=330)
+    context = create_gl33_context()
     framebuffer = context.simple_framebuffer((160, 90), components=4)
     framebuffer.use()
     backend = ModernGLBackend.from_context(context, (160, 90), (160, 90))
